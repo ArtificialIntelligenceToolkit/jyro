@@ -1020,7 +1020,8 @@ class Picture(object):
              self.filename = original.filename
              self.mode = original.mode
              self.displayScale = original.displayScale
-#QD & DT 4.2.15	
+#QD & DT 4.2.15
+             self.array = numpy.array(self.image)
         else:
              self.width = 0
              self.height = 0
@@ -1102,7 +1103,8 @@ class Picture(object):
          return (Pixel(x, y, self) for x in range(self.width)
                  for y in range(self.height))
     def getPixel(self, x, y):
-        return Pixel( x, y, self)
+         #QD & DT 4.2.15
+        return self.array[x, y, :]
     def getColor(self, x, y):
         retval = self.pixels[x, y]
         return Color(retval)
