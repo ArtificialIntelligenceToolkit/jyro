@@ -1379,18 +1379,20 @@ class Pixmap:
         return _tkCall(self.image.height)
 
     def getPixel(self, x, y):
-        return self.array[x, y, : ]
+        #QD & DT 4.2.15
+	return self.array[x, y, : ]
 
 	"""Returns a list [r,g,b] with the RGB color values for pixel (x,y)
         r,g,b are in range(256)
 
         """
+	‘’’
         value = _tkCall(self.image.get, x,y)
         if type(value) ==  int:
             return [value, value, value]
         else:
             return map(int, value.split()) 
-
+	‘’’
     def setPixel(self, x, y,r, g, b):
         """Sets pixel (x,y) to the color given by RGB values r, g, and b.
         r,g,b should be in range(256)
@@ -1399,6 +1401,8 @@ class Pixmap:
         self.array[x, y, 0] = (r)
 	self.array[x, y, 1] = (g)
 	self.array[x, y, 2] = (b)
+        #QD & DT 4.2.15
+
         #_tkExec(self.image.put, "{%s}"%color_rgb(r,g,b), (x, y))
 
     def clone(self):
