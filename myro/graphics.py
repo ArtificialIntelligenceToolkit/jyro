@@ -1,6 +1,6 @@
 # graphics.py
 """Simple object oriented graphics library
-This is a quick change
+
 Original code by John Zelle
 Updates       by Doug Blank
 
@@ -127,6 +127,12 @@ http://mcsp.wartburg.edu/zelle/python for a quick reference"""
 import time, os, sys
 import Tkinter
 import globvars
+
+# QD & DT 4.2.15
+import numpy
+from matplotlib.pyplot import imshow
+
+
 try: 	 
      import PIL.Image as PyImage	     
 except: 	 
@@ -1014,6 +1020,7 @@ class Picture(object):
              self.filename = original.filename
              self.mode = original.mode
              self.displayScale = original.displayScale
+#QD & DT 4.2.15	
         else:
              self.width = 0
              self.height = 0
