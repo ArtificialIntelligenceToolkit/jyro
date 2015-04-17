@@ -1032,6 +1032,7 @@ class Picture(object):
              self.filename = None
              self.mode = None
              self.displayScale = 1
+             print("Hey Quincy!")
              self.array = []
 
     def set(self, width, height, data=None, mode="color", value=255):
