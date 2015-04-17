@@ -1058,7 +1058,7 @@ class Picture(object):
         if self.image.mode != "RGBA": # palette
              self.image = self.image.convert("RGBA")
 #QD & DT: Can we just change self.pixel to self.array?
-        self.pixels = numpy.array(self.image.load())
+        self.pixels = numpy.array(self.image)
         self.palette = self.image.getpalette()
         self.filename = 'Camera Image'
         if self.pixels == None:
@@ -1072,14 +1072,14 @@ class Picture(object):
     def rotate(self, degreesCCwise):
          self.image = self.image.rotate(degreesCCwise)
 #QD & DT 4.17.15
-         self.pixels = numpy.array(self.image.load())
+         self.pixels = numpy.array(self.image)
          self.width = self.image.size[0]
          self.height = self.image.size[1]
 
     def resize(self, x, y):
          self.image = self.image.resize((int(x), int(y)))
 #QD & DT 4.17.15
-         self.pixels = numpy.array(self.image.load())
+         self.pixels = numpy.array(self.image)
          self.width = self.image.size[0]
          self.height = self.image.size[1]         
 
@@ -1098,7 +1098,7 @@ class Picture(object):
         if self.image.mode != "RGBA": # palette
              self.image = self.image.convert("RGBA")
 #QD & DT 4.17.15
-        self.pixels = numpy.array(self.image.load())
+        self.pixels = numpy.array(self.image)
         self.width = self.image.size[0]
         self.height = self.image.size[1]
         self.palette = self.image.getpalette()
