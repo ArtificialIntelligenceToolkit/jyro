@@ -1031,7 +1031,7 @@ class Picture(object):
              self.filename = None
              self.mode = None
              self.displayScale = 1
-             
+             self.array = []
 
     def set(self, width, height, data=None, mode="color", value=255):
         self.width = width
