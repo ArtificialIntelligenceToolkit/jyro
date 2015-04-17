@@ -1403,7 +1403,7 @@ class Pixmap:
         """
         self.array[x, y, 0] = (r)
     self.array[x, y, 1] = (g)
-	    self.array[x, y, 2] = (b)
+	self.array[x, y, 2] = (b)
         #QD & DT 4.2.15
 
         #_tkExec(self.image.put, "{%s}"%color_rgb(r,g,b), (x, y))
