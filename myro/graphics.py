@@ -62,6 +62,8 @@ Programming: An Introduction to Computer Science" by John Zelle,
 published by Franklin, Beedle & Associates.  Also see
 http://mcsp.wartburg.edu/zelle/python for a quick reference"""
 
+# Version 3.4
+#     Added numpy.array to Picture Load
 # Version 3.3 8/8/06
 #     Added checkMouse method to GraphWin
 # Version 3.2.2 5/30/05
@@ -1053,6 +1055,7 @@ class Picture(object):
                                             data, 'raw', "L", 0, 1)
         if self.image.mode != "RGBA": # palette
              self.image = self.image.convert("RGBA")
+#QD & DT: Can we just change self.pixel to self.array?
         self.pixels = self.image.load()
         self.palette = self.image.getpalette()
         self.filename = 'Camera Image'
@@ -1090,7 +1093,7 @@ class Picture(object):
         self.image = PyImage.open(filename)
         if self.image.mode != "RGBA": # palette
              self.image = self.image.convert("RGBA")
-        self.pixels = self.image.load()
+        self.pixels = numpy.array(self.image.load())
         self.width = self.image.size[0]
         self.height = self.image.size[1]
         self.palette = self.image.getpalette()
@@ -1100,11 +1103,11 @@ class Picture(object):
     def __repr__(self):
         return "<Picture instance (%d x %d)>" % (self.width, self.height)
     def getPixels(self):
-         return (Pixel(x, y, self) for x in range(self.width)
+        return (Pixel(x, y, self) for x in range(self.width)
                  for y in range(self.height))
     def getPixel(self, x, y):
          #QD & DT 4.2.15
-        return self.array[x, y, :]
+        return Pixel( x, y, self)
     def getColor(self, x, y):
         retval = self.pixels[x, y]
         return Color(retval)
@@ -1128,7 +1131,7 @@ class Pixel(object):
         self.x = x
         self.y = y
         self.picture = picture
-        self.pixels = picture.pixels
+        self.pixels = picture.array
         # we might need this, for gifs:
         self.palette = self.picture.image.getpalette()
     def __repr__(self):
@@ -1393,14 +1396,14 @@ class Pixmap:
         else:
             return map(int, value.split()) 
 	‘’’
-    def setPixel(self, x, y,r, g, b):
+    def setPixel(self, x, y, r, g, b):
         """Sets pixel (x,y) to the color given by RGB values r, g, and b.
         r,g,b should be in range(256)
 
         """
         self.array[x, y, 0] = (r)
-	self.array[x, y, 1] = (g)
-	self.array[x, y, 2] = (b)
+	    self.array[x, y, 1] = (g)
+	    self.array[x, y, 2] = (b)
         #QD & DT 4.2.15
 
         #_tkExec(self.image.put, "{%s}"%color_rgb(r,g,b), (x, y))

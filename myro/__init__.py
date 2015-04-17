@@ -1338,7 +1338,11 @@ def savePicture(picture, filename):
     else:
         return picture.image.save(filename)
 
-def show(picture, name="default"):
+#QD & DT 4.2.15
+def show(picture):
+    imshow(picture.array)
+
+def showTk(picture, name="default"):
     if myro.globvars.windows.get(name, None) == None:
         myro.globvars.windows[name] = GraphWin("Myro: %s" % name)
     try:
