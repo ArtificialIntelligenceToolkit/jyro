@@ -1402,7 +1402,7 @@ class Pixmap:
 
         """
         self.array[x, y, 0] = (r)
-	    self.array[x, y, 1] = (g)
+    self.array[x, y, 1] = (g)
 	    self.array[x, y, 2] = (b)
         #QD & DT 4.2.15
 
