@@ -1023,6 +1023,7 @@ class Picture(object):
              self.mode = original.mode
              self.displayScale = original.displayScale
 #QD & DT 4.2.15
+             print("Hey Quincy!")
              self.array = numpy.array(self.image)
         else:
              self.width = 0
