@@ -1385,17 +1385,17 @@ class Pixmap:
         #QD & DT 4.2.15
 	return self.array[x, y, : ]
 
-	#"""Returns a list [r,g,b] with the RGB color values for pixel (x,y)
-    #    r,g,b are in range(256)
+	"""Returns a list [r,g,b] with the RGB color values for pixel (x,y)
+        r,g,b are in range(256)
 
-    #    """
-	‘’’
+        """
+	
         value = _tkCall(self.image.get, x,y)
         if type(value) ==  int:
             return [value, value, value]
         else:
             return map(int, value.split()) 
-	‘’’
+
     def setPixel(self, x, y, r, g, b):
         """Sets pixel (x,y) to the color given by RGB values r, g, and b.
         r,g,b should be in range(256)
