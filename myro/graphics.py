@@ -1058,7 +1058,8 @@ class Picture(object):
         if self.image.mode != "RGBA": # palette
              self.image = self.image.convert("RGBA")
 #QD & DT: Can we just change self.pixel to self.array?
-        self.pixels = numpy.array(self.image)
+#QD & DT 5.1.15
+        self.pixels = numpy.swapaxes(numpy.array(self.image), 0, 1)
         self.palette = self.image.getpalette()
         self.filename = 'Camera Image'
         if self.pixels == None:
