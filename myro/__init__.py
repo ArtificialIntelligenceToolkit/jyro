@@ -1252,6 +1252,7 @@ def makePicture(*args):
             filename, message = urllib.urlretrieve(filename)
         retval.load(filename)
     elif len(args) == 2:
+        #QD & DT 5.1.15
         x = args[0]
         y = args[1]
         retval = Picture()

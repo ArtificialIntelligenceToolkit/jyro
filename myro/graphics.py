@@ -1098,7 +1098,8 @@ class Picture(object):
         if self.image.mode != "RGBA": # palette
              self.image = self.image.convert("RGBA")
 #QD & DT 4.17.15
-        self.pixels = numpy.array(self.image)
+#QD & DT 5.1.15
+        self.pixels = numpy.swapaxes(numpy.array(self.image), 1, 0)
         self.width = self.image.size[0]
         self.height = self.image.size[1]
         self.palette = self.image.getpalette()
@@ -1117,7 +1118,8 @@ class Picture(object):
         retval = self.pixels[x, y]
         return Color(retval)
     def setColor(self, x, y, newColor):
-        self.pixels[x, y] = tuple(newColor.getRGBA())
+    #QD & DT 5.1.15
+        self.pixels[y, x] = tuple(newColor.getRGBA())
     def setRGB(self, x, y, rgb):
         self.setColor(x, y, Color(*rgb))
     def getRGB(self, x, y):
@@ -1388,7 +1390,7 @@ class Pixmap:
 
     def getPixel(self, x, y):
         #QD & DT 4.2.15
-	return self.array[x, y, : ]
+	return self.pixels[x, y, : ]
 
 	"""Returns a list [r,g,b] with the RGB color values for pixel (x,y)
         r,g,b are in range(256)
