@@ -1340,7 +1340,7 @@ def savePicture(picture, filename):
 
 #QD & DT 4.2.15
 def show(picture):
-    imshow(picture.array)
+    imshow(picture.pixels)
 
 def showTk(picture, name="default"):
     if myro.globvars.windows.get(name, None) == None:

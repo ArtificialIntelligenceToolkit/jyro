@@ -1108,16 +1108,16 @@ class Picture(object):
     def __repr__(self):
         return "<Picture instance (%d x %d)>" % (self.width, self.height)
     def getPixels(self):
-        return (Pixel(x, y, self) for x in range(self.width)
+        return (Pixel(y, x, self) for x in range(self.width)
                  for y in range(self.height))
     def getPixel(self, x, y):
          #QD & DT 4.2.15
-        return Pixel( x, y, self)
+        return Pixel( y, x, self)
     def getColor(self, x, y):
-        retval = self.pixels[x, y]
+        retval = self.pixels[y, x]
         return Color(retval)
     def setColor(self, x, y, newColor):
-        self.pixels[x, y] = tuple(newColor.getRGBA())
+        self.pixels[y, x] = tuple(newColor.getRGBA())
     def setRGB(self, x, y, rgb):
         self.setColor(x, y, Color(*rgb))
     def getRGB(self, x, y):
@@ -1152,7 +1152,7 @@ class Pixel(object):
     def getPixel(self, x, y):
         return Pixel( x, y, self.picture)
     def getColor(self):
-        retval = self.pixels[self.x, self.y]
+        retval = self.pixels[self.y, self.x]
         return Color(retval)
     def setColor(self, newColor):
          self.pixels[self.x, self.y] = tuple(newColor.getRGBA())
@@ -1406,9 +1406,9 @@ class Pixmap:
         r,g,b should be in range(256)
 
         """
-        self.array[x, y, 0] = (r)
-	self.array[x, y, 1] = (g)
-	self.array[x, y, 2] = (b)
+        self.array[y, x, 0] = (r)
+	self.array[y, x, 1] = (g)
+	self.array[y, x, 2] = (b)
         #QD & DT 4.2.15
 
         #_tkExec(self.image.put, "{%s}"%color_rgb(r,g,b), (x, y))
