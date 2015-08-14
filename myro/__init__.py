@@ -1,12 +1,12 @@
 """
-Myro Base Classes.
+Jyro/Myro Base Classes.
 (c) 2006, Institute for Personal Robots in Education
 http://www.roboteducation.org/
 Distributed under a Shared Source License
 """
 
 __REVISION__ = "$Revision: 1630 $"
-__VERSION__  = "2.9.1"
+__VERSION__  = "4.0.1"
 __AUTHOR__   = "Doug Blank <dblank@cs.brynmawr.edu>"
 
 import sys, atexit, time, random, pickle, threading, os, types, copy
