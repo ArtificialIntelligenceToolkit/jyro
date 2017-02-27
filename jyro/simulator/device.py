@@ -3,6 +3,11 @@ import math
 PIOVER180 = math.pi / 180.0
 PIOVER2   = math.pi / 2.0
 
+class Device():
+    def __init__(self, type):
+        self.type = type
+        self.active = True
+
 class RangeSensor():
     def __init__(self, name, geometry, arc, maxRange, noise=0.0):
         self.type = name
@@ -164,7 +169,7 @@ class Camera():
         self.range = [0 for i in range(self.width)]
 
 class PioneerFrontSonars(RangeSensor):
-    def __init__(self):
+    def __init__(self, maxRange=8.0, noise=0.0):
         RangeSensor.__init__(self,
             "sonar", geometry = (( 0.10, 0.175, 90 * PIOVER180),
                                  ( 0.17, 0.15, 65 * PIOVER180),
@@ -174,7 +179,7 @@ class PioneerFrontSonars(RangeSensor):
                                  ( 0.20,-0.11,-40 * PIOVER180),
                                  ( 0.17,-0.15,-65 * PIOVER180),
                                  ( 0.10,-0.175,-90 * PIOVER180)),
-            arc = 5 * PIOVER180, maxRange = 8.0, noise = 0.0)
+                             arc = 5 * PIOVER180, maxRange=maxRange, noise=noise)
         self.groups = {'all': range(8),
                        'front': (3, 4),
                        'front-left' : (1,2,3),
@@ -192,7 +197,7 @@ class PioneerFrontSonars(RangeSensor):
                        'back-all' : []}
 
 class PioneerBackSonars(RangeSensor):
-    def __init__(self):
+    def __init__(self, maxRange=8.0, noise=0.0):
         RangeSensor.__init__(self,
             "sonar", geometry = (( -0.10,-0.175,-90 * PIOVER180),
                                  ( -0.17,-0.15, (180 + 65) * PIOVER180),
@@ -202,7 +207,7 @@ class PioneerBackSonars(RangeSensor):
                                  ( -0.20, 0.11, (180 - 40) * PIOVER180),
                                  ( -0.17, 0.15, (180 - 65) * PIOVER180),
                                  ( -0.10, 0.175,(180 - 90) * PIOVER180)),
-            arc = 5 * PIOVER180, maxRange = 8.0, noise = 0.0)
+                             arc = 5 * PIOVER180, maxRange=maxRange, noise=noise)
         self.groups = {'all': range(8),
                        'front': [],
                        'front-left' : [],
@@ -220,7 +225,7 @@ class PioneerBackSonars(RangeSensor):
                        'back-all' : ( 1, 2, 3, 4, 5, 6)}
 
 class Pioneer16Sonars(RangeSensor):
-    def __init__(self):
+    def __init__(self, maxRange=8.0, noise=0.0):
         RangeSensor.__init__(self,
             "sonar", geometry = (( 0.10, 0.175, 90 * PIOVER180),
                                  ( 0.17, 0.15, 65 * PIOVER180),
@@ -238,7 +243,7 @@ class Pioneer16Sonars(RangeSensor):
                                  ( -0.20, 0.11, (180 - 40) * PIOVER180),
                                  ( -0.17, 0.15, (180 - 65) * PIOVER180),
                                  ( -0.10, 0.175,(180 - 90) * PIOVER180)),
-            arc = 5 * PIOVER180, maxRange = 8.0, noise = 0.0)
+                             arc = 5 * PIOVER180, maxRange = maxRange, noise = noise)
         self.groups = {'all': range(16),
                        'front': (3, 4),
                        'front-left' : (1,2,3),
@@ -256,13 +261,13 @@ class Pioneer16Sonars(RangeSensor):
                        'back-all' : ( 9, 10, 11, 12, 13, 14)}
 
 class Pioneer4Sonars(RangeSensor):
-    def __init__(self):
+    def __init__(self, maxRange=8.0, noise=0.0):
         RangeSensor.__init__(self, "sonar",
              geometry = (( 0.225, 0.05, 15 * PIOVER180),
                          ( 0.225,-0.05,-15 * PIOVER180),
                          ( -0.225,-0.05,(180 + 15) * PIOVER180),
                          ( -0.225, 0.05,(180 - 15) * PIOVER180),
-                         ), arc = 5 * PIOVER180, maxRange = 8.0, noise = 0.0)
+                         ), arc = 5 * PIOVER180, maxRange = maxRange, noise = noise)
         self.groups = {'all': range(4),
                        'front': (0, 1),
                        'front-left' : (0,),

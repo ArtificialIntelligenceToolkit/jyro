@@ -13,7 +13,7 @@ from jyro.simulator.color import colorMap, colorCode
 
 PIOVER180 = math.pi / 180.0
 PIOVER2   = math.pi / 2.0
-RESOLUTION = 7 # decimal places of accuracy in making comparisons, rounding
+RESOLUTION = 7        # decimal places in making comparisons, rounding
 MAXRAYLENGTH = 1000.0 # some large measurement in meters
 
 ## Support functions
@@ -41,11 +41,11 @@ class Segment():
     """
     Represent a line segment.
     """
-    def __init__(self, start, end, id=None, partOf=None):
+    def __init__(self, start, end, id=None, type=None):
         self.start = [round(v, RESOLUTION) for v in start]
         self.end = [round(v, RESOLUTION) for v in end]
         self.id = id
-        self.partOf = partOf
+        self.type = type
         self.vertical = self.start[0] == self.end[0]
         if not self.vertical:
             self.slope = round((self.end[1] - self.start[1])/
@@ -127,15 +127,15 @@ class Segment():
                 return None
 
 class Simulator():
-    def __init__(self, size, offsets, scale):
-        self.width, self.height = size
-        self.offset_x, self.offset_y = offsets
-        self.scale = scale
+    def __init__(self):
+        """
+        All distances in meters, angles in radians.
+        .world - list of Segments, used for determining collisions, views
+        .shapes - list of things to draw
+        .lights - list of light sources
+        """
         self.robots = []
         self.robotsByName = {}
-        self.needToMove = [] # list of robots that need to move (see step)
-        self.maxTrailSize = 10 # 5 * 60 * 10 # 5 minutes (one timeslice = 1/10 sec)
-        self.trailStart = 0
         self.world = []
         self.time = 0.0
         self.timeslice = 100 # in milliseconds
@@ -148,7 +148,6 @@ class Simulator():
         self.stepCount = 0
         self.running = 0
         self.lights = []
-        self.trail = []
         self.shapes = []
 
     def update_idletasks(self):
@@ -167,11 +166,15 @@ class Simulator():
         else:
             return None
 
-    def remove(self, thing):
-        pass
-
     def update(self):
         pass
+
+    def addBox(self, ulx, uly, lrx, lry, wallcolor="white"):
+        self.addWall( ulx, uly, ulx, lry, wallcolor)
+        self.addWall( ulx, uly, lrx, uly, wallcolor)
+        self.addWall( ulx, lry, lrx, lry, wallcolor)
+        self.addWall( lrx, uly, lrx, lry, wallcolor)
+        self.addShape(Box((ulx, uly), (lrx, lry), fill=wallcolor))
 
     def addWall(self, x1, y1, x2, y2, color="black"):
         seg = Segment((x1, y1), (x2, y2), len(self.world) + 1, "wall")
@@ -179,23 +182,8 @@ class Simulator():
         seg.type = "wall"
         self.world.append(seg)
 
-    def addShape(self, name, *args, **nargs):
-        # addShape("box", x, y, x, y, color)
-        # addShape("polygon", points, fill = "black", outline = "purple")
-        # addshape("line", (x1, y1), (x2, y2), fill = "purple", width?)
-        # addshape("oval", (x1, y1), (x2, y2), fill = "purple", outline="yellow")
-        if len(nargs) == 0:
-            temp = list(args)
-            temp.insert(0, name)
-            self.shapes.append(temp)
-        else:
-            self.shapes.append( (name, args, nargs) )
-
-    def addBox(self, ulx, uly, lrx, lry, color="white", wallcolor="black"):
-        self.addWall( ulx, uly, ulx, lry, wallcolor)
-        self.addWall( ulx, uly, lrx, uly, wallcolor)
-        self.addWall( ulx, lry, lrx, lry, wallcolor)
-        self.addWall( lrx, uly, lrx, lry, wallcolor)
+    def addShape(self, shape):
+        self.shapes.append(shape)
 
     def addLight(self, x, y, brightness, color="yellow"):
         self.lights.append(Light(x, y, brightness, color))
@@ -222,60 +210,28 @@ class Simulator():
         for l in self.lights:
             l.x, l.y, l.brightness = l._xyb
 
-    def draw(self):
-        self.canvas.clear()
+    def draw(self, canvas, scale=None):
+        if scale is None:
+            max_x = max([segment.start[0] for segment in self.world] +
+                        [segment.end[0] for segment in self.world])
+            max_y = max([segment.start[1] for segment in self.world] +
+                        [segment.end[1] for segment in self.world])
+            scale = min(canvas.width/max_x, canvas.height/max_y)
+        canvas.clear()
         for shape in self.shapes:
-            if shape[0] == "box":
-                name, ulx, uly, lrx, lry, fill = shape
-                outline = "black"
-                if self.canvas.display["wireframe"]:
-                    if fill != "white":
-                        outline = fill
-                    else:
-                        outline = "black"
-                    fill = ""
-                self.canvas.drawRectangle(self.scale_x(ulx), self.scale_y(uly),
-                                     self.scale_x(lrx), self.scale_y(lry),
-                                     tag="line", fill=fill, outline=outline)
-            elif shape[0] == "polygon":
-                name, points, nargs = shape
-                xys = [(self.scale_x(x), self.scale_y(y)) for (x, y) in points]
-                self.canvas.drawPolygon(xys, tag="line", **nargs)
-            elif shape[0] == "line":
-                name, ((x1, y1), (x2, y2)), nargs = shape
-                x1, y1, x2, y2 = self.scale_x(x1), self.scale_y(y1), self.scale_x(x2), self.scale_y(y2)
-                self.canvas.drawLine(x1, y1, x2, y2, tag="line", **nargs)
-            elif shape[0] == "oval":
-                name, ((x1, y1), (x2, y2)), nargs = shape
-                x1, y1, x2, y2 = self.scale_x(x1), self.scale_y(y1), self.scale_x(x2), self.scale_y(y2)
-                self.canvas.drawOval(x1, y1, x2, y2, tag="line", **nargs)
-        if not self.canvas.display["wireframe"]:
-            for segment in self.world:
-                (x1, y1), (x2, y2) = segment.start, segment.end
-                id = self.drawLine(x1, y1, x2, y2, fill="black", tag="line")
-                segment.id = id
+            shape.draw(canvas, scale)
         for light in self.lights:
-            if light.type != "fixed": continue 
-            x, y, brightness, color = light.x, light.y, light.brightness, light.color
-            self.drawOval((x - brightness), (y - brightness),
-                          (x + brightness), (y + brightness),
-                          tag="line", fill=color, outline="orange")
-        i = 0
-        for path in self.trail:
-            if self.robots[i].subscribed and self.robots[i].display["trail"] == 1:
-                if path[self.trailStart] != None:
-                    lastX, lastY, lastA = path[self.trailStart]
-                    #lastX, lastY = self.scale_x(lastX), self.scale_y(lastY)
-                    color = self.robots[i].colorParts["trail"]
-                    for p in range(self.trailStart, self.trailStart + self.maxTrailSize):
-                        xya = path[p % self.maxTrailSize]
-                        if xya == None: break
-                        x, y = xya[0], xya[1]
-                        self.drawLine(lastX, lastY, x, y, fill=color, tag="trail")
-                        lastX, lastY = x, y
-            i += 1
+            if light.type != "fixed":
+                continue 
+            x, y, brightness, color = (canvas.scale_x(light.x),
+                                       canvas.scale_y(light.y),
+                                       light.brightness,
+                                       light.color)
+            canvas.drawOval((x - brightness), (y - brightness),
+                            (x + brightness), (y + brightness),
+                            fill=color, outline="orange")
         for robot in self.robots:
-            robot._last_pose = (-1, -1, -1)
+            robot.draw(canvas, scale)
 
     def resetLights(self, brightness, width, height):
         """
@@ -318,54 +274,22 @@ class Simulator():
             light.x = coords[i][0]
             light.y = coords[i][1]
 
-    def addRobot(self, port, r):
+    def addRobot(self, r, port=None):
         self.robots.append(r)
         self.robotsByName[r.name] = r
-        self.trail.append([None] * self.maxTrailSize)
         r.simulator = self
-        r._xya = r._gx, r._gy, r._ga # save original position for later reset
         r._port = port
         if port != None:
             self.assoc[port] = r
             self.ports.append(port)
 
-    def scale_x(self, x):
-        return self.offset_x + (x * self.scale)
-
-    def scale_y(self, y):
-        return self.offset_y - (y * self.scale)
-
-    def addTrail(self, pos, index, robot):
-        self.trail[pos][index] = robot._gx, robot._gy, robot._ga
-
     def step(self):
         """
         Advance the world by timeslice milliseconds.
         """
-        # might want to randomize this order so the same ones
-        # don't always move first:
-        self.needToMove = []
         self.time += (self.timeslice / 1000.0)
-        i = 0
         for r in self.robots:
-            r.ovx, r.ovy, r.ova = r.vx, r.vy, r.va
-            resetVelocities = 0
-            if r.stall:
-                resetVelocities = 1
-                ovx, r.ovx = r.ovx, r.ovx/5.0
-                ovy, r.ovy = r.ovy, r.ovy/5.0
-                ova, r.ova = r.ova, r.ova/5.0
-            r.step(self.timeslice)
-            if r.type != "puck" and resetVelocities:
-                r.vx = ovx
-                r.vy = ovy
-                r.va = ova
-            self.addTrail(i, self.stepCount % self.maxTrailSize, r)
-            i += 1
-        for r in self.needToMove:
-            r.step(self.timeslice, movePucks = 0)
-        if self.stepCount > self.maxTrailSize:
-            self.trailStart = ((self.stepCount + 1) % self.maxTrailSize)
+            collision = r.step(self.timeslice)
         self.stepCount += 1
 
     def castRay(self, robot, x1, y1, a, maxRange = MAXRAYLENGTH,
@@ -436,7 +360,7 @@ class Simulator():
         if len(hits) == 0:
             return (None, None, None)
         else:
-            return min(hits)
+            return min(hits, key=lambda items: items[0])
 
     def process(self, request, sockname):
         """
@@ -530,13 +454,13 @@ class Simulator():
                     pass
                 if name in self.robotsByName:
                     r = self.robotsByName[name]
-                    r.setPose(x, y, thr, 1)#handofgod
+                    r.setPose(x, y, thr) # handofgod
                     r.localize(0, 0, 0)
                     return "ok"
                 elif name.isdigit():
                     pos = int(name)
                     r = self.robots[pos]
-                    r.setPose(x, y, thr, 1)#handofgod
+                    r.setPose(x, y, thr) # handofgod
                     r.localize(0, 0, 0)
                     return "ok"
                 return "error: no such robot position '%s'" % name
@@ -718,31 +642,114 @@ class Simulator():
                         index += 1
         return retval
 
-    def setCanvas(self, canvas):
-        self.canvas = canvas
-
-    def addBox(self, ulx, uly, lrx, lry, color="white", wallcolor="black"):
-        Simulator.addBox(self, ulx, uly, lrx, lry, color, wallcolor)
-        self.shapes.append( ("box", ulx, uly, lrx, lry, color) )
-        self.redraw()
-
-    def addWall(self, x1, y1, x2, y2, color="black"):
-        seg = Segment((x1, y1), (x2, y2), partOf="wall")
-        seg.color = color
-        seg.type = "wall"
-        id = self.drawLine(x1, y1, x2, y2, fill=color, tag="line")
-        seg.id = id
-        self.world.append( seg )
-
-if __name__ == "__main__":
-    from jyro.simulator.canvas import Canvas
-    from jyro.simulator.robot import Pioneer
-    from jyro.simulator.device import PioneerFrontSonars
+class Shape():
+    def __init__(self):
+        pass
     
-    sim = Simulator((443,466), (22,420), 40.357554)
-    canvas = Canvas()
-    robot = Pioneer("Pioneer", 4.99, 1.32, 6.28)
-    robot.addDevice(PioneerFrontSonars())
-    sim.setCanvas(canvas)
-    sim.addRobot(60000, robot)
+class Box(Shape):
+    def __init__(self, ul, lr, outline="black", fill="white"):
+        Shape.__init__(self)
+        self.x1, self.y1 = ul
+        self.x2, self.y2 = lr
+        self.outline = outline
+        self.fill = fill
 
+    def draw(self, canvas, scale):
+        outline, fill = self.outline, self.fill
+        if canvas.display["wireframe"]:
+            if fill != "white":
+                outline = self.fill
+            else:
+                outline = "black"
+            fill = ""
+        canvas.drawRectangle(
+            canvas.scale_x(self.x1, scale),
+            canvas.scale_y(self.y1, scale),
+            canvas.scale_x(self.x2, scale),
+            canvas.scale_y(self.y2, scale),
+            fill=fill, outline=outline)
+
+class Polygon(Shape):
+    def __init__(self, points, outline="black", fill="white"):
+        Shape.__init__(self)
+        self.points = points
+        self.outline = outline
+        self.fill = fill
+
+    def draw(self, canvas, scale):
+        outline, fill = self.outline, self.fill
+        if canvas.display["wireframe"]:
+            if fill != "white":
+                outline = fill
+            else:
+                outline = "black"
+            fill = ""
+        xys = [(canvas.scale_x(x, scale),
+                canvas.scale_y(y, scale)) for (x, y) in self.points]
+        canvas.drawPolygon(xys, fill=fill, outline=outline)
+
+class Line(Shape):
+    def __init__(self, p1, p2, outline="black", fill="white"):
+        Shape.__init__(self)
+        self.p1 = p1
+        self.p2 = p2
+        self.outline = outline
+        self.fill = fill
+
+    def draw(self, canvas, scale):
+        x1, y1, x2, y2 = (canvas.scale_x(self.p1[0], scale),
+                          canvas.scale_y(self.p1[1], scale),
+                          canvas.scale_x(self.p2[0], scale),
+                          canvas.scale_y(self.p2[1], scale))
+        canvas.drawLine(x1, y1, x2, y2, outline=self.outline)
+
+class Oval(Shape):
+    def __init__(self, p1, p2, outline="black", fill="white"):
+        Shape.__init__(self)
+        self.p1 = p1
+        self.p2 = p2
+        self.outline = outline
+        self.fill = fill
+
+    def draw(self, canvas, scale):
+        outline, fill = self.outline, self.fill
+        if canvas.display["wireframe"]:
+            if fill != "white":
+                outline = fill
+            else:
+                outline = "black"
+            fill = ""
+        x1, y1, x2, y2 = (canvas.scale_x(self.p1[0], scale),
+                          canvas.scale_y(self.p1[1], scale),
+                          canvas.scale_x(self.p2[0], scale),
+                          canvas.scale_y(self.p2[1], scale))
+        canvas.drawOval(x1, y1, x2, y2, fill=fill, outline=outline)
+
+def main():
+    from jyro.simulator import Pioneer, Simulator, PioneerFrontSonars, Gripper
+    
+    sim = Simulator()
+    # (443,466), (22,420), 40.357554)
+    sim.addBox(0, 0, 10, 10, wallcolor="white") # meters
+    sim.addBox(1, 1, 2, 2, wallcolor="purple")
+    sim.addBox(7, 7, 8, 8, wallcolor="purple")
+    robot = Pioneer("Pioneer", 5.00, 5.00, math.pi / 2) # meters, radians
+    robot.addDevice(PioneerFrontSonars(maxRange=4.0))
+    robot.addDevice(Gripper())
+    sim.addRobot(robot)
+    return sim
+    
+if __name__ == "__main__":
+    from jyro.simulator import Canvas
+    from jyro.simulator.svgcanvas import SVGCanvas
+    sim = main()
+    print("pose:", sim["Pioneer"].getPose())
+    sim["Pioneer"].move(1, 1)
+    canvas = SVGCanvas((400, 400))
+    for i in range(500):
+        sim.step()
+        for r in sim.robots:
+            r.updateDevices()
+        print("pose:", sim["Pioneer"].getPose())
+        sim.draw(canvas)
+        canvas.save("canvas%d.svg" % i)

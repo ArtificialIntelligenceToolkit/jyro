@@ -209,4 +209,5 @@ if __name__ == "__main__":
     sim = TkSimulator((443,466), (22,420), 40.357554)
     robot = Pioneer("Pioneer", 4.99, 1.32, 6.28)
     robot.addDevice(PioneerFrontSonars())
-    sim.addRobot(60000, robot)
+    sim.addRobot(robot)
+    sim.
