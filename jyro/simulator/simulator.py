@@ -37,6 +37,16 @@ def normRad(x):
         x += 2 * math.pi
     return x
 
+class Light():
+    def __init__(self, x, y, brightness, color):
+        self.x = x
+        self.y = y
+        self.brightness = brightness
+        self.color = color
+        self._xyb = self.x, self.y, self.brightness
+        self.type = "fixed"
+        self.rgb = colorMap[self.color]
+
 class Segment():
     """
     Represent a line segment.
@@ -223,8 +233,8 @@ class Simulator():
         for light in self.lights:
             if light.type != "fixed":
                 continue 
-            x, y, brightness, color = (canvas.scale_x(light.x),
-                                       canvas.scale_y(light.y),
+            x, y, brightness, color = (canvas.scale_x(light.x, scale),
+                                       canvas.scale_y(light.y, scale),
                                        light.brightness,
                                        light.color)
             canvas.drawOval((x - brightness), (y - brightness),

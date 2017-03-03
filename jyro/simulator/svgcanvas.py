@@ -29,8 +29,8 @@ class SVGCanvas(Canvas):
 
     def drawOval(self, x1, y1, x2, y2, fill="", outline="black"):
         cx, cy = (x2 - x1)/2, (y2 - y1)/2
-        r1, r2  = distance((cx, cy), (rx, ry))
-        shape = Ellipse((cx, cy), (r1, r2), fill=fill, stroke=outline)
+        radius  = distance((cx, cy), (x2, y2))
+        shape = Ellipse((cx, cy), (radius, radius), fill=fill, stroke=outline)
         shape.draw(self._canvas)
 
     def drawRectangle(self, x1, y1, x2, y2, fill="", outline="black"):
