@@ -34,9 +34,8 @@ class Canvas():
     def renderSVG(self):
         print("renderSVG")
         
-    def scale_x(self, x, scale):
-        return (x * scale)
+    def pos_x(self, x):
+        return (x * self.scale)
 
-    def scale_y(self, y, scale):
-        return (y * scale)
-
+    def pos_y(self, y):
+        return ((self.max_y - y) * self.scale)

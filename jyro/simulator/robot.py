@@ -176,54 +176,6 @@ class Robot():
                     i += 1
             elif d.type == "bulb":
                 pass # nothing to update... it is not a sensor
-            elif d.type == "directional": # directional light sensor
-                # for each light sensor:
-                i = 0
-                for (d_x, d_y, d_a) in d.geometry:
-                    # compute total light on sensor, falling off as square of distance
-                    # position of light sensor in global coords:
-                    gx = self._gx + (d_x * cos_a90 - d_y * sin_a90)
-                    gy = self._gy + (d_x * sin_a90 + d_y * cos_a90)
-                    ga = self._ga + d_a
-                    sum = 0.0
-                    rgb = [0, 0, 0]
-                    for light in self.simulator.lights: # for each light source:
-                        # these can be type == "fixed" and type == "bulb"
-                        if light.type == "fixed":
-                            x, y, brightness, light_rgb = light.x, light.y, light.brightness, light.rgb
-                        else: # get position from robot:
-                            if light.robot == self: continue # don't read the bulb if it is on self
-                            ogx, ogy, oga, brightness = (light.robot._gx,
-                                                         light.robot._gy,
-                                                         light.robot._ga,
-                                                         light.brightness)
-                            oa90 = oga + PIOVER2
-                            x = ogx + (light.x * math.cos(oa90) - light.y * math.sin(oa90))
-                            y = ogy + (light.x * math.sin(oa90) + light.y * math.cos(oa90))
-                        seg = Segment((x,y), (gx, gy))
-                        a = -seg.angle() + PIOVER2
-                        # see if line between sensor and light is blocked by any boundaries (ignore other bb)
-                        dist,hit,obj = self.simulator.castRay(self, x, y, a, seg.length() - .1,
-                                                               ignoreRobot = "other", rayType = "light")
-                        # compute distance of segment; value is sqrt of that?
-                        if not hit: # no hit means it has a clear shot:
-                            # is the light source within the arc of the sensor
-                            dx = x - gx
-                            dy = y - gy
-                            angle = math.atan2(dy, dx) - (ga + PIOVER2)
-                            angle = normRad(angle)
-                            if -math.pi/3 < angle < math.pi/3:
-                                self.drawRay("light", x, y, gx, gy, "orange")
-                                intensity = (1.0 / (seg.length() * seg.length()))
-                                sum += min(intensity, 1.0) * math.cos(angle*1.5) * brightness * 1000.0
-                                for c in [0, 1, 2]:
-                                    rgb[c] += light_rgb[c] * (1.0/ seg.length())
-                            else:
-                                self.drawRay("lightBlocked", x, y, gx, gy, "blue")
-                        else:
-                            self.drawRay("lightBlocked", x, y, hit[0], hit[1], "purple")
-                    d.scan[i] = min(sum, d.maxRange)
-                    i += 1
             elif d.type == "light":
                 # for each light sensor:
                 i = 0
@@ -254,14 +206,15 @@ class Robot():
                         dist,hit,obj = self.simulator.castRay(self, x, y, a, seg.length() - .1,
                                                                ignoreRobot = "other", rayType = "light")
                         # compute distance of segment; value is sqrt of that?
+                        intensity = (1.0 / (seg.length() * seg.length()))
                         if not hit: # no hit means it has a clear shot:
                             self.drawRay("light", x, y, gx, gy, "orange")
-                            intensity = (1.0 / (seg.length() * seg.length()))
-                            sum += min(intensity, 1.0) * brightness * 1000.0
-                            for c in [0, 1, 2]:
-                                rgb[c] += light_rgb[c] * (1.0/ seg.length())
+                            ## Add 0.75 for direct light if not blocked
+                            sum += min(intensity, 1.0) * brightness * 0.75 * 1000.0
                         else:
                             self.drawRay("lightBlocked", x, y, hit[0], hit[1], "purple")
+                        ## Add 0.25 for ambient light always
+                        sum += min(intensity, 1.0) * brightness * 0.25 * 1000.0
                     d.scan[i] = min(sum, d.maxRange)
                     for c in [0, 1, 2]:
                         d.rgb[i][c] = min(int(rgb[c]), 255)
@@ -458,9 +411,9 @@ class Robot():
         self.updatePosition(p_x, p_y, p_a)
         return True # able to move
 
-    def draw(self, canvas, scale):
+    def draw(self, canvas):
         for shape in self.shapes:
-            shape.draw(canvas, scale)
+            shape.draw(canvas)
 
     def addDevice(self, dev):
         self.devices.append(dev)
@@ -480,7 +433,7 @@ class Blimp(Robot):
         self.radius = 0.44 # meters
         self.color = "purple"
 
-    def draw(self, canvas, scale):
+    def draw(self, canvas):
         Robot.draw(self, canvas)
         a90 = self._ga + PIOVER2 # angle is 90 degrees off for graphics
         cos_a90 = math.cos(a90)
@@ -501,11 +454,11 @@ class Puck(Robot):
         self.friction = 0.90
         self.type = "puck"
 
-    def draw(self, canvas, scale):
+    def draw(self, canvas):
         """
         Draws the body of the robot. Not very efficient.
         """
-        Robot.draw(self, canvas, scale)
+        Robot.draw(self, canvas)
         if self.display["body"] == 1:
             x1, y1, x2, y2 = (self._gx - self.radius), (self._gy - self.radius), (self._gx + self.radius), (self._gy + self.radius)
             canvas.drawOval(x1, y1, x2, y2, fill=self.color, outline="black")
@@ -527,11 +480,11 @@ class Pioneer(Robot):
                                     (.175, -.175, -.175, .175)), color=color)
         self.radius = 0.4
 
-    def draw(self, canvas, scale):
+    def draw(self, canvas):
         """
         Draws the body of the robot. Not very efficient.
         """
-        Robot.draw(self, canvas, scale)
+        Robot.draw(self, canvas)
         # Body Polygon, by x and y lists:
         sx = [.225, .15, -.15, -.225, -.225, -.15, .15, .225]
         sy = [.08, .175, .175, .08, -.08, -.175, -.175, -.08]
@@ -542,26 +495,26 @@ class Pioneer(Robot):
             xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                    self._gy + x * sin_a90 + y * cos_a90),
                      sx, sy)
-            xy = [(canvas.scale_x(x, scale), canvas.scale_y(y, scale)) for (x, y) in list(xy)]
+            xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
             canvas.drawPolygon(xy, fill=self.color, outline="black")
             bx = [ .14, .06, .06, .14] # front camera
             by = [-.06, -.06, .06, .06]
             xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                    self._gy + x * sin_a90 + y * cos_a90),
                      bx, by)
-            xy = [(canvas.scale_x(x, scale), canvas.scale_y(y, scale)) for (x, y) in list(xy)]
+            xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
             canvas.drawPolygon(xy, fill="black")
             if self.bulb:
-                x = canvas.scale_x(self._gx + self.bulb.x * cos_a90 - self.bulb.y * sin_a90, scale)
-                y = canvas.scale_y(self._gy + self.bulb.x * sin_a90 + self.bulb.y * cos_a90, scale)
+                x = canvas.pos_x(self._gx + self.bulb.x * cos_a90 - self.bulb.y * sin_a90)
+                y = canvas.pos_y(self._gy + self.bulb.x * sin_a90 + self.bulb.y * cos_a90)
                 radius = .05
                 canvas.drawOval(x - radius, y - radius, x + radius, y + radius,
                                         fill=self.color, outline="black")
             if self.gripper:
                 # draw grippers:
                 # base:
-                xy = [(canvas.scale_x(self._gx + x * cos_a90 - y * sin_a90, scale),
-                       canvas.scale_y(self._gy + x * sin_a90 + y * cos_a90, scale)) for (x,y) in
+                xy = [(canvas.pos_x(self._gx + x * cos_a90 - y * sin_a90),
+                       canvas.pos_y(self._gy + x * sin_a90 + y * cos_a90)) for (x,y) in
                       ((self.gripper.pose[0], self.gripper.openPosition),
                        (self.gripper.pose[0], -self.gripper.openPosition))]
                 canvas.drawLine(xy[0][0], xy[0][1], xy[1][0], xy[1][1],
@@ -576,7 +529,7 @@ class Pioneer(Robot):
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                        self._gy + x * sin_a90 + y * cos_a90),
                          xs, ys)
-                xy = [(canvas.scale_x(x, scale), canvas.scale_y(y, scale)) for (x, y) in list(xy)]
+                xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
                 canvas.drawPolygon(xy, fill="black", outline="black")
                 # right arm:
                 xs = []
@@ -588,20 +541,20 @@ class Pioneer(Robot):
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                        self._gy + x * sin_a90 + y * cos_a90),
                          xs, ys)
-                xy = [(canvas.scale_x(x, scale), canvas.scale_y(y, scale)) for (x, y) in list(xy)]
+                xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
                 canvas.drawPolygon(xy, fill="black", outline="black")
         if self.display["boundingBox"] == 1:
             if self.boundingBox != []:
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                        self._gy + x * sin_a90 + y * cos_a90),
                          self.boundingBox[0], self.boundingBox[1])
-                xy = [(canvas.scale_x(x, scale), canvas.scale_y(y, scale)) for (x, y) in list(xy)]
+                xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
                 canvas.drawPolygon(xy, fill="", outline="purple")
             if self.boundingSeg != []:
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                        self._gy + x * sin_a90 + y * cos_a90),
                          self.boundingSeg[0], self.boundingSeg[1])
-                xy = [(canvas.scale_x(x, scale), canvas.scale_y(y, scale)) for (x, y) in list(xy)]
+                xy = [(canvas.pos_x(x, scale), canvas.pos_y(y, scale)) for (x, y) in list(xy)]
                 for i in range(0, len(xy), 2):
                     canvas.drawLine(xy[i][0], xy[i][1],
                                             xy[i + 1][0], xy[i + 1][1],
@@ -609,15 +562,15 @@ class Pioneer(Robot):
             additionalSegments = self.additionalSegments(self._gx, self._gy, cos_a90, sin_a90)
             if additionalSegments != []:
                 for s in additionalSegments:
-                    canvas.drawLine(canvas.scale_x(s.start[0], scale),
-                                    canvas.scale_y(s.start[1], scale),
-                                    canvas.scale_x(s.end[0], scale),
-                                    canvas.scale_x(s.end[1], scale),
+                    canvas.drawLine(canvas.pos_x(s.start[0], scale),
+                                    canvas.pos_y(s.start[1], scale),
+                                    canvas.pos_x(s.end[0], scale),
+                                    canvas.pos_x(s.end[1], scale),
                                     fill="purple")
         if self.display["speech"] == 1:
             if self.sayText != "":
                 # center of robot:
-                x, y = canvas.scale_x(self._gx, scale), canvas.scale_y(self._gy, scale)
+                x, y = canvas.pos_x(self._gx, scale), canvas.pos_y(self._gy, scale)
                 canvas.drawText(x, y, self.sayText) # % self.name)
 
 class Myro(Robot):

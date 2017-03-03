@@ -180,6 +180,8 @@ class Simulator():
         pass
 
     def addBox(self, ulx, uly, lrx, lry, wallcolor="white"):
+        ulx, lrx = min(ulx, lrx), max(ulx, lrx)
+        uly, lry = max(uly, lry), min(uly, lry)
         self.addWall( ulx, uly, ulx, lry, wallcolor)
         self.addWall( ulx, uly, lrx, uly, wallcolor)
         self.addWall( ulx, lry, lrx, lry, wallcolor)
@@ -221,27 +223,38 @@ class Simulator():
             l.x, l.y, l.brightness = l._xyb
 
     def draw(self, canvas, scale=None):
+        canvas.max_x = max([segment.start[0] for segment in self.world] +
+                           [segment.end[0] for segment in self.world])
+        canvas.max_y = max([segment.start[1] for segment in self.world] +
+                           [segment.end[1] for segment in self.world])
         if scale is None:
-            max_x = max([segment.start[0] for segment in self.world] +
-                        [segment.end[0] for segment in self.world])
-            max_y = max([segment.start[1] for segment in self.world] +
-                        [segment.end[1] for segment in self.world])
-            scale = min(canvas.width/max_x, canvas.height/max_y)
+            if canvas.height is None:
+                canvas.scale = canvas.width/canvas.max_x
+            elif canvas.width is None:
+                canvas.scale =  canvas.height/canvas.max_y
+            else:
+                canvas.scale = min(canvas.width/canvas.max_x, canvas.height/canvas.max_y)
+        else:
+            canvas.scale = scale
+
+        if canvas.height is None:
+            canvas.height = canvas.max_y * canvas.scale
+        if canvas.width is None:
+            canvas.width = canvas.max_x * canvas.scale
+            
         canvas.clear()
         for shape in self.shapes:
-            shape.draw(canvas, scale)
+            shape.draw(canvas)
         for light in self.lights:
             if light.type != "fixed":
                 continue 
-            x, y, brightness, color = (canvas.scale_x(light.x, scale),
-                                       canvas.scale_y(light.y, scale),
-                                       light.brightness,
+            x, y, brightness, color = (canvas.pos_x(light.x),
+                                       canvas.pos_y(light.y),
+                                       light.brightness * canvas.scale,
                                        light.color)
-            canvas.drawOval((x - brightness), (y - brightness),
-                            (x + brightness), (y + brightness),
-                            fill=color, outline="orange")
+            canvas.drawCircle(x, y, brightness, fill=color, outline="orange")
         for robot in self.robots:
-            robot.draw(canvas, scale)
+            robot.draw(canvas)
 
     def resetLights(self, brightness, width, height):
         """
@@ -288,6 +301,7 @@ class Simulator():
         self.robots.append(r)
         self.robotsByName[r.name] = r
         r.simulator = self
+        r.updateDevices()
         r._port = port
         if port != None:
             self.assoc[port] = r
@@ -300,6 +314,8 @@ class Simulator():
         self.time += (self.timeslice / 1000.0)
         for r in self.robots:
             collision = r.step(self.timeslice)
+        for r in self.robots:
+            r.updateDevices()
         self.stepCount += 1
 
     def castRay(self, robot, x1, y1, a, maxRange = MAXRAYLENGTH,
@@ -313,11 +329,13 @@ class Simulator():
         # check if it is not a light ray, or if it is, and not above walls:
         if (rayType != "light") or (rayType == "light" and not self.lightAboveWalls):
             for w in self.world:
+                ## Direct light:
                 retval = w.intersects(seg)
                 if retval:
                     dist = Segment(retval, (x1, y1)).length()
                     if dist <= maxRange:
                         hits.append( (dist, retval, w) ) # distance, hit, obj
+                ## Ambient light:
         # go down list of robots, and see if you hit one:
         if ignoreRobot != "all":
             for r in self.robots:
@@ -664,7 +682,7 @@ class Box(Shape):
         self.outline = outline
         self.fill = fill
 
-    def draw(self, canvas, scale):
+    def draw(self, canvas):
         outline, fill = self.outline, self.fill
         if canvas.display["wireframe"]:
             if fill != "white":
@@ -673,10 +691,10 @@ class Box(Shape):
                 outline = "black"
             fill = ""
         canvas.drawRectangle(
-            canvas.scale_x(self.x1, scale),
-            canvas.scale_y(self.y1, scale),
-            canvas.scale_x(self.x2, scale),
-            canvas.scale_y(self.y2, scale),
+            canvas.pos_x(self.x1),
+            canvas.pos_y(self.y1),
+            canvas.pos_x(self.x2),
+            canvas.pos_y(self.y2),
             fill=fill, outline=outline)
 
 class Polygon(Shape):
@@ -686,7 +704,7 @@ class Polygon(Shape):
         self.outline = outline
         self.fill = fill
 
-    def draw(self, canvas, scale):
+    def draw(self, canvas):
         outline, fill = self.outline, self.fill
         if canvas.display["wireframe"]:
             if fill != "white":
@@ -694,8 +712,8 @@ class Polygon(Shape):
             else:
                 outline = "black"
             fill = ""
-        xys = [(canvas.scale_x(x, scale),
-                canvas.scale_y(y, scale)) for (x, y) in self.points]
+        xys = [(canvas.pos_x(x),
+                canvas.pos_y(y)) for (x, y) in self.points]
         canvas.drawPolygon(xys, fill=fill, outline=outline)
 
 class Line(Shape):
@@ -706,11 +724,11 @@ class Line(Shape):
         self.outline = outline
         self.fill = fill
 
-    def draw(self, canvas, scale):
-        x1, y1, x2, y2 = (canvas.scale_x(self.p1[0], scale),
-                          canvas.scale_y(self.p1[1], scale),
-                          canvas.scale_x(self.p2[0], scale),
-                          canvas.scale_y(self.p2[1], scale))
+    def draw(self, canvas):
+        x1, y1, x2, y2 = (canvas.pos_x(self.p1[0]),
+                          canvas.pos_y(self.p1[1]),
+                          canvas.pos_x(self.p2[0]),
+                          canvas.pos_y(self.p2[1]))
         canvas.drawLine(x1, y1, x2, y2, outline=self.outline)
 
 class Oval(Shape):
@@ -721,7 +739,7 @@ class Oval(Shape):
         self.outline = outline
         self.fill = fill
 
-    def draw(self, canvas, scale):
+    def draw(self, canvas):
         outline, fill = self.outline, self.fill
         if canvas.display["wireframe"]:
             if fill != "white":
@@ -729,10 +747,10 @@ class Oval(Shape):
             else:
                 outline = "black"
             fill = ""
-        x1, y1, x2, y2 = (canvas.scale_x(self.p1[0], scale),
-                          canvas.scale_y(self.p1[1], scale),
-                          canvas.scale_x(self.p2[0], scale),
-                          canvas.scale_y(self.p2[1], scale))
+        x1, y1, x2, y2 = (canvas.pos_x(self.p1[0]),
+                          canvas.pos_y(self.p1[1]),
+                          canvas.pos_x(self.p2[0]),
+                          canvas.pos_y(self.p2[1]))
         canvas.drawOval(x1, y1, x2, y2, fill=fill, outline=outline)
 
 def main():
