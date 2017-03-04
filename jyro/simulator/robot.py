@@ -30,7 +30,8 @@ class Robot():
             self.radius = 0.0
         self.color = color
         self.colorParts = {"ir": "pink", "sonar": "lightgray", "bumper": "black", "trail": color}
-        self.devices = [Device("speech")]
+        self.devices = []
+        self.device = {}
         self.simulator = None # will be set when added to simulator
         self.vx, self.vy, self.va = (0.0, 0.0, 0.0) # meters / second, rads / second
         self.friction = 1.0
@@ -45,6 +46,7 @@ class Robot():
         self.gripper = None
         self.sayText = ""
         self.shapes = []
+        self.addDevice(Device("speech"))
         
     def drawRay(self, dtype, x1, y1, x2, y2, color):
         self.shapes.append(Line((x1, y1), (x2, y2), outline=color))
@@ -417,6 +419,7 @@ class Robot():
 
     def addDevice(self, dev):
         self.devices.append(dev)
+        self.device[dev.type] = dev
         if dev.type == "bulb":
             self.simulator.lights.append( dev )
             dev.robot = self

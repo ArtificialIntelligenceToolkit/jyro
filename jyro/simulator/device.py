@@ -8,6 +8,9 @@ class Device():
         self.type = type
         self.active = True
 
+    def __len__(self):
+        return 1
+
 class RangeSensor():
     def __init__(self, name, geometry, arc, maxRange, noise=0.0):
         self.type = name
@@ -19,6 +22,9 @@ class RangeSensor():
         self.noise = noise
         self.groups = {}
         self.scan = [0] * len(geometry) # for data
+
+    def __len__(self):
+        return len(self.geometry)
 
 class Light():
     def __init__(self, x, y, brightness, color="yellow"):
