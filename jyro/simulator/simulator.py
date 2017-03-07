@@ -530,7 +530,7 @@ class Simulator():
                     val = float(message[1])
                 except:
                     pass
-                self.assoc[sockname[1]].bulb.brightness = val
+                self.assoc[sockname[1]].device["bulb"].brightness = val
                 retval = "ok"
             elif message[0] == "i": # "i_name_index_property_val"
                 try:

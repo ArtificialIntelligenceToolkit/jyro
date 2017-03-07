@@ -2,6 +2,7 @@ from jyro.simulator.simulator import Segment, Line
 from jyro.simulator.device import Device
 
 import math
+from collections import defaultdict
 
 PIOVER180 = math.pi / 180.0
 PIOVER2   = math.pi / 2.0
@@ -31,7 +32,7 @@ class Robot():
         self.color = color
         self.colorParts = {"ir": "pink", "sonar": "lightgray", "bumper": "black", "trail": color}
         self.devices = []
-        self.device = {}
+        self.device = defaultdict(lambda: None)
         self.simulator = None # will be set when added to simulator
         self.vx, self.vy, self.va = (0.0, 0.0, 0.0) # meters / second, rads / second
         self.friction = 1.0
@@ -42,8 +43,6 @@ class Robot():
         self.stall = 0
         self.energy = 10000.0
         self.maxEnergyCostPerStep = 1.0
-        self.bulb = None
-        self.gripper = None
         self.sayText = ""
         self.shapes = []
         self.addDevice(Device("speech"))
@@ -54,8 +53,8 @@ class Robot():
     def additionalSegments(self, x, y, cos_a90, sin_a90, **dict):
         # dynamic segments
         retval = []
-        if self.gripper:
-            g = self.gripper
+        if self.device["gripper"]:
+            g = self.device["gripper"]
             x1, x2, x3, x4 = g.pose[0], g.pose[0] + g.armLength, g.pose[0], g.pose[0] + g.armLength
             y1, y2, y3, y4 = g.armPosition, g.armPosition, -g.armPosition,  -g.armPosition
             if g.robot.proposePosition and g.velocity != 0.0:
@@ -146,134 +145,9 @@ class Robot():
         return None
 
     def updateDevices(self):
-        # measure and draw the new device data:
-        # do some computations and save for speed
-        self.shapes[:] = []
-        a90 = self._ga + PIOVER2
-        cos_a90 = math.cos(a90)
-        sin_a90 = math.sin(a90)
-        for d in self.devices:
-            if not d.active:
-                continue
-            if d.type in ["sonar", "ir", "bumper"]:
-                i = 0
-                for x, y, a in d.geometry:
-                    ga = (self._ga + a)
-                    gx = self._gx + (x * cos_a90 - y * sin_a90)
-                    gy = self._gy + (x * sin_a90 + y * cos_a90)
-                    dist, hit, obj = self.simulator.castRay(self, gx, gy, -ga, d.maxRange)
-                    if hit:
-                        self.drawRay(d.type, gx, gy, hit[0], hit[1], "black")
-                    else:
-                        hx, hy = math.sin(-ga) * d.maxRange, math.cos(-ga) * d.maxRange
-                        dist = d.maxRange
-                        self.drawRay(d.type, gx, gy, gx + hx, gy + hy, self.colorParts[d.type])
-                    if d.type == "bumper":
-                        if dist < d.maxRange:
-                            d.scan[i] = 1
-                        else:
-                            d.scan[i] = 0
-                    else:
-                        d.scan[i] = dist
-                    i += 1
-            elif d.type == "bulb":
-                pass # nothing to update... it is not a sensor
-            elif d.type == "light":
-                # for each light sensor:
-                i = 0
-                for (d_x, d_y, d_a) in d.geometry:
-                    # compute total light on sensor, falling off as square of distance
-                    # position of light sensor in global coords:
-                    gx = self._gx + (d_x * cos_a90 - d_y * sin_a90)
-                    gy = self._gy + (d_x * sin_a90 + d_y * cos_a90)
-                    sum = 0.0
-                    rgb = [0, 0, 0]
-                    for light in self.simulator.lights: # for each light source:
-                        # these can be type == "fixed" and type == "bulb"
-                        if light.type == "fixed":
-                            x, y, brightness, light_rgb = light.x, light.y, light.brightness, light.rgb
-                        else: # get position from robot:
-                            if light.robot == self: continue # don't read the bulb if it is on self
-                            ogx, ogy, oga, brightness, color = (light.robot._gx,
-                                                                light.robot._gy,
-                                                                light.robot._ga,
-                                                                light.brightness, light.robot.color)
-                            oa90 = oga + PIOVER2
-                            x = ogx + (light.x * math.cos(oa90) - light.y * math.sin(oa90))
-                            y = ogy + (light.x * math.sin(oa90) + light.y * math.cos(oa90))
-                            light_rgb = colorMap[color]
-                        seg = Segment((x,y), (gx, gy))
-                        a = -seg.angle() + PIOVER2
-                        # see if line between sensor and light is blocked by any boundaries (ignore other bb)
-                        dist,hit,obj = self.simulator.castRay(self, x, y, a, seg.length() - .1,
-                                                               ignoreRobot = "other", rayType = "light")
-                        # compute distance of segment; value is sqrt of that?
-                        intensity = (1.0 / (seg.length() * seg.length()))
-                        if not hit: # no hit means it has a clear shot:
-                            self.drawRay("light", x, y, gx, gy, "orange")
-                            ## Add 0.75 for direct light if not blocked
-                            sum += min(intensity, 1.0) * brightness * 0.75 * 1000.0
-                        else:
-                            self.drawRay("lightBlocked", x, y, hit[0], hit[1], "purple")
-                        ## Add 0.25 for ambient light always
-                        sum += min(intensity, 1.0) * brightness * 0.25 * 1000.0
-                    d.scan[i] = min(sum, d.maxRange)
-                    for c in [0, 1, 2]:
-                        d.rgb[i][c] = min(int(rgb[c]), 255)
-                    i += 1
-            elif d.type == "gripper":
-                # cast a ray in two places, set scan = 1 if it is "broken"
-                x = d.pose[0] + .07 # first beam distance from center of robot
-                y = d.armPosition # distance between arms
-                d.scan = [0] * (2 + 3) # two beams, 3 sensors (no lift)
-                d.objs = []
-                for i in range(2): # two beams
-                    gx = self._gx + (x * cos_a90 - y * sin_a90)
-                    gy = self._gy + (x * sin_a90 + y * cos_a90)
-                    ogx = self._gx + (x * cos_a90 + y * sin_a90)
-                    ogy = self._gy + (x * sin_a90 - y * cos_a90)
-                    dist,hit,obj = self.simulator.castRay(self, gx, gy, -self._ga + PIOVER2, 2 * y,
-                                                          rayType = "breakBeam")
-                    if hit:
-                        d.scan[i] = 1
-                        d.objs.append(obj) # for gripping
-                        if self.display["gripper"] == 1: # breaker beams
-                            self.drawRay("gripper", gx, gy, ogx, ogy, "orange")
-                    elif self.display["gripper"] == 1:
-                        self.drawRay("gripper", gx, gy, ogx, ogy, "purple")
-                    x += .07  # distance between beams
-                d.scan[2] = d.isClosed()
-                d.scan[3] = d.isOpened()
-                d.scan[4] = d.isMoving()
-            elif d.type == "ptz":
-                pass
-            elif d.type == "speech":
-                pass
-            elif d.type == "camera":
-                x, y = self._gx, self._gy # camera location
-                stepAngle = d.zoom / float(d.width - 1)
-                a = d.startAngle
-                d.scan = []
-                for i in range(d.width):
-                    # FIX: move camera to d.pose; currently assumes robot center
-                    ga = (self._ga + a)
-                    dist,hit,obj = self.simulator.castRay(self, x, y, -ga,
-                                                           ignoreRobot="self",
-                                                           rayType = "camera")
-                    if obj != None:
-                        if i in [0, d.width - 1]:
-                            self.drawRay("camera", x, y, hit[0], hit[1], "purple")
-                        dist = (10 - dist)/10.0 # 10 meter range
-                        if obj.type == "wall":
-                            height = int(min(max((dist ** 2) * d.height/2.0, 1), d.height/2))
-                        else:
-                            height = int(min(max((dist ** 2) * d.height/4.0, 1), d.height/4))
-                        d.scan.append((colorCode[obj.color], height))
-                    else:
-                        d.scan.append((None, None))
-                    a -= stepAngle
-            else:
-                raise AttributeError("unknown type of device: '%s'" % d.type)
+        for device in self.devices:
+            if device.active:
+                device.update(self)
 
     def eat(self, amt):
         for light in self.simulator.lights:
@@ -344,9 +218,9 @@ class Robot():
             for w in self.simulator.world:
                 if bb.intersects(w):
                     self.proposePosition = 0
-                    if self.gripper and self.gripper.velocity != 0:
-                        self.gripper.state = "stop"
-                        self.gripper.velocity = 0
+                    if self.device["gripper"] and self.device["gripper"].velocity != 0:
+                        self.device["gripper"].state = "stop"
+                        self.device["gripper"].velocity = 0
                     if self.ovx != 0 or self.ovy != 0 or self.ova != 0:
                         self.stall = 1
                     return False # collision
@@ -380,17 +254,17 @@ class Robot():
                     bbintersect = bb.intersects(r_seg)
                     if bbintersect:
                         self.proposePosition = 0
-                        if self.gripper and self.gripper.velocity != 0:
-                            self.gripper.state = "stop"
-                            self.gripper.velocity = 0
+                        if self.device["gripper"] and self.device["gripper"].velocity != 0:
+                            self.device["gripper"].state = "stop"
+                            self.device["gripper"].velocity = 0
                         if self.ovx != 0 or self.ovy != 0 or self.ova != 0:
                             self.stall = 1
                         return False # collision
         self.proposePosition = 0
         # ok! move the robot, if it wanted to move
-        if self.gripper and self.gripper.velocity != 0:
+        if self.device["gripper"] and self.device["gripper"].velocity != 0:
             # handle moving paddles
-            d = self.gripper
+            d = self.device["gripper"]
             d.armPosition, d.velocity = d.moveWhere()
             if d.armPosition == d.openPosition:
                 ## Drop puck:
@@ -422,13 +296,7 @@ class Robot():
         self.device[dev.type] = dev
         if dev.type == "bulb":
             self.simulator.lights.append( dev )
-            dev.robot = self
-            self.bulb = dev
-        elif dev.type == "camera":
-            dev.robot = self
-        elif dev.type == "gripper":
-            dev.robot = self
-            self.gripper = dev
+        dev.robot = self
 
 class Blimp(Robot):
     def __init__(self, *args, **kwargs):
@@ -507,28 +375,28 @@ class Pioneer(Robot):
                      bx, by)
             xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
             canvas.drawPolygon(xy, fill="black")
-            if self.bulb:
-                x = canvas.pos_x(self._gx + self.bulb.x * cos_a90 - self.bulb.y * sin_a90)
-                y = canvas.pos_y(self._gy + self.bulb.x * sin_a90 + self.bulb.y * cos_a90)
+            if self.device["bulb"]:
+                x = canvas.pos_x(self._gx + self.device["bulb"].x * cos_a90 - self.device["bulb"].y * sin_a90)
+                y = canvas.pos_y(self._gy + self.device["bulb"].x * sin_a90 + self.device["bulb"].y * cos_a90)
                 radius = .05
                 canvas.drawOval(x - radius, y - radius, x + radius, y + radius,
                                         fill=self.color, outline="black")
-            if self.gripper:
+            if self.device["gripper"]:
                 # draw grippers:
                 # base:
                 xy = [(canvas.pos_x(self._gx + x * cos_a90 - y * sin_a90),
                        canvas.pos_y(self._gy + x * sin_a90 + y * cos_a90)) for (x,y) in
-                      ((self.gripper.pose[0], self.gripper.openPosition),
-                       (self.gripper.pose[0], -self.gripper.openPosition))]
+                      ((self.device["gripper"].pose[0], self.device["gripper"].openPosition),
+                       (self.device["gripper"].pose[0], -self.device["gripper"].openPosition))]
                 canvas.drawLine(xy[0][0], xy[0][1], xy[1][0], xy[1][1],
                                         outline="black")
                 # left arm:
                 xs = []
                 ys = []
-                xs.append(self.gripper.pose[0]);     ys.append(self.gripper.armPosition + 0.01)
-                xs.append(self.gripper.pose[0] + self.gripper.armLength); ys.append(self.gripper.armPosition + 0.01)
-                xs.append(self.gripper.pose[0] + self.gripper.armLength); ys.append(self.gripper.armPosition - 0.01)
-                xs.append(self.gripper.pose[0]);     ys.append(self.gripper.armPosition - 0.01)
+                xs.append(self.device["gripper"].pose[0]);     ys.append(self.device["gripper"].armPosition + 0.01)
+                xs.append(self.device["gripper"].pose[0] + self.device["gripper"].armLength); ys.append(self.device["gripper"].armPosition + 0.01)
+                xs.append(self.device["gripper"].pose[0] + self.device["gripper"].armLength); ys.append(self.device["gripper"].armPosition - 0.01)
+                xs.append(self.device["gripper"].pose[0]);     ys.append(self.device["gripper"].armPosition - 0.01)
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                        self._gy + x * sin_a90 + y * cos_a90),
                          xs, ys)
@@ -537,10 +405,10 @@ class Pioneer(Robot):
                 # right arm:
                 xs = []
                 ys = []
-                xs.append(self.gripper.pose[0]);     ys.append(-self.gripper.armPosition + 0.01)
-                xs.append(self.gripper.pose[0] + self.gripper.armLength); ys.append(-self.gripper.armPosition + 0.01)
-                xs.append(self.gripper.pose[0] + self.gripper.armLength); ys.append(-self.gripper.armPosition - 0.01)
-                xs.append(self.gripper.pose[0]);     ys.append(-self.gripper.armPosition - 0.01)
+                xs.append(self.device["gripper"].pose[0]);     ys.append(-self.device["gripper"].armPosition + 0.01)
+                xs.append(self.device["gripper"].pose[0] + self.device["gripper"].armLength); ys.append(-self.device["gripper"].armPosition + 0.01)
+                xs.append(self.device["gripper"].pose[0] + self.device["gripper"].armLength); ys.append(-self.device["gripper"].armPosition - 0.01)
+                xs.append(self.device["gripper"].pose[0]);     ys.append(-self.device["gripper"].armPosition - 0.01)
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                        self._gy + x * sin_a90 + y * cos_a90),
                          xs, ys)
@@ -618,28 +486,28 @@ class Myro(Robot):
                 xy = list(xy)
                 canvas.drawPolygon(xy, fill=colors[i])
             # --------------------------------------------------------------------------
-            if self.bulb:
-                x = (self._gx + self.bulb.x * cos_a90 - self.bulb.y * sin_a90)
-                y = (self._gy + self.bulb.x * sin_a90 + self.bulb.y * cos_a90)
+            if self.device["bulb"]:
+                x = (self._gx + self.device["bulb"].x * cos_a90 - self.device["bulb"].y * sin_a90)
+                y = (self._gy + self.device["bulb"].x * sin_a90 + self.device["bulb"].y * cos_a90)
                 radius = .04
                 canvas.drawOval(x - radius, y - radius, x + radius, y + radius,
                                         fill=self.color, outline="black")
-            if self.gripper:
+            if self.device["gripper"]:
                 # draw grippers:
                 # base:
                 xy = [(self._gx + x * cos_a90 - y * sin_a90,
                        self._gy + x * sin_a90 + y * cos_a90) for (x,y) in
-                      ((self.gripper.pose[0], self.gripper.openPosition),
-                       (self.gripper.pose[0], -self.gripper.openPosition))]
+                      ((self.device["gripper"].pose[0], self.device["gripper"].openPosition),
+                       (self.device["gripper"].pose[0], -self.device["gripper"].openPosition))]
                 canvas.drawLine(xy[0][0], xy[0][1], xy[1][0], xy[1][1],
                                         fill="black")
                 # left arm:
                 xs = []
                 ys = []
-                xs.append(self.gripper.pose[0]);     ys.append(self.gripper.armPosition + 0.01)
-                xs.append(self.gripper.pose[0] + self.gripper.armLength); ys.append(self.gripper.armPosition + 0.01)
-                xs.append(self.gripper.pose[0] + self.gripper.armLength); ys.append(self.gripper.armPosition - 0.01)
-                xs.append(self.gripper.pose[0]);     ys.append(self.gripper.armPosition - 0.01)
+                xs.append(self.device["gripper"].pose[0]);     ys.append(self.device["gripper"].armPosition + 0.01)
+                xs.append(self.device["gripper"].pose[0] + self.device["gripper"].armLength); ys.append(self.device["gripper"].armPosition + 0.01)
+                xs.append(self.device["gripper"].pose[0] + self.device["gripper"].armLength); ys.append(self.device["gripper"].armPosition - 0.01)
+                xs.append(self.device["gripper"].pose[0]);     ys.append(self.device["gripper"].armPosition - 0.01)
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                        self._gy + x * sin_a90 + y * cos_a90),
                          xs, ys)
@@ -648,10 +516,10 @@ class Myro(Robot):
                 # right arm:
                 xs = []
                 ys = []
-                xs.append(self.gripper.pose[0]);     ys.append(-self.gripper.armPosition + 0.01)
-                xs.append(self.gripper.pose[0] + self.gripper.armLength); ys.append(-self.gripper.armPosition + 0.01)
-                xs.append(self.gripper.pose[0] + self.gripper.armLength); ys.append(-self.gripper.armPosition - 0.01)
-                xs.append(self.gripper.pose[0]);     ys.append(-self.gripper.armPosition - 0.01)
+                xs.append(self.device["gripper"].pose[0]);     ys.append(-self.device["gripper"].armPosition + 0.01)
+                xs.append(self.device["gripper"].pose[0] + self.device["gripper"].armLength); ys.append(-self.device["gripper"].armPosition + 0.01)
+                xs.append(self.device["gripper"].pose[0] + self.device["gripper"].armLength); ys.append(-self.device["gripper"].armPosition - 0.01)
+                xs.append(self.device["gripper"].pose[0]);     ys.append(-self.device["gripper"].armPosition - 0.01)
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                        self._gy + x * sin_a90 + y * cos_a90),
                          xs, ys)
