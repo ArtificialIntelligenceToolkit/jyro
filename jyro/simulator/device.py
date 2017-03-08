@@ -1,3 +1,5 @@
+from jyro.simulator.simulator import Segment
+
 import math
 
 PIOVER180 = math.pi / 180.0
@@ -57,31 +59,6 @@ class RangeSensor():
                 self.scan[i] = dist
             i += 1
 
-class Light():
-    def __init__(self, x, y, brightness, color="yellow"):
-        self.active = 1
-        self.x = x
-        self.y = y
-        self.brightness = brightness
-        self.color = color
-        self.origColor = color
-        self._xyb = x, y, brightness # original settings for reset
-        self.rgb = colorMap[color]
-        self.type = "fixed"
-
-    def update(self, robot):
-        pass
-
-class BulbDevice(Light):
-    """
-    Bulb will have color of robot.
-    """
-    def __init__(self, x, y):
-        Light.__init__(self, x, y, 1.0)
-        self.type = "bulb"
-        self.active = 1
-        self.geometry = (0, 0, 0)
-
 class LightSensor():
     def __init__(self, geometry, noise=0.0):
         self.type = "light"
@@ -108,19 +85,14 @@ class LightSensor():
             sum = 0.0
             rgb = [0, 0, 0]
             for light in robot.simulator.lights: # for each light source:
-                # these can be type == "fixed" and type == "bulb"
-                if light.type == "fixed":
-                    x, y, brightness, light_rgb = light.x, light.y, light.brightness, light.rgb
-                else: # get position from robot:
-                    if light.robot == robot: continue # don't read the bulb if it is on robot
-                    ogx, ogy, oga, brightness, color = (light.robot._gx,
-                                                        light.robot._gy,
-                                                        light.robot._ga,
-                                                        light.brightness, light.robot.color)
-                    oa90 = oga + PIOVER2
-                    x = ogx + (light.x * math.cos(oa90) - light.y * math.sin(oa90))
-                    y = ogy + (light.x * math.sin(oa90) + light.y * math.cos(oa90))
-                    light_rgb = colorMap[color]
+                x, y, brightness, light_rgb = light.x, light.y, light.brightness, light.rgb
+                # "bulb"
+                #else: # get position from robot:
+                #    if light.robot == robot: continue # don't read the bulb if it is on robot
+                #    ogx, ogy, oga, brightness, color = (light.robot._gx,
+                #                                        light.robot._gy,
+                #                                        light.robot._ga,
+                #                                        light.brightness, light.robot.color)
                 seg = Segment((x,y), (gx, gy))
                 a = -seg.angle() + PIOVER2
                 # see if line between sensor and light is blocked by any boundaries (ignore other bb)

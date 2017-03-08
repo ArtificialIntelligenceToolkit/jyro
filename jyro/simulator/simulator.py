@@ -10,6 +10,7 @@ import random
 import sys
 
 from jyro.simulator.color import colorMap, colorCode
+from calysto.graphics import Color
 
 PIOVER180 = math.pi / 180.0
 PIOVER2   = math.pi / 2.0
@@ -44,8 +45,17 @@ class Light():
         self.brightness = brightness
         self.color = color
         self._xyb = self.x, self.y, self.brightness
-        self.type = "fixed"
-        self.rgb = colorMap[self.color]
+        if isinstance(self.color, str):
+            self.rgb = colorMap[self.color]
+        else:
+            self.rgb = self.color
+
+    def draw(self, canvas):
+        x, y, brightness, color = (canvas.pos_x(self.x),
+                                   canvas.pos_y(self.y),
+                                   self.brightness * canvas.scale,
+                                   self.color)
+        canvas.drawCircle(x, y, brightness, fill=color, outline="orange")
 
 class Segment():
     """
@@ -200,15 +210,6 @@ class Simulator():
     def addLight(self, x, y, brightness, color="yellow"):
         self.lights.append(Light(x, y, brightness, color))
 
-    def refillLights(self, brightness):
-        """
-        Set all the lights to the given brightness.
-        """
-        for light in self.lights:
-            if light.type != "fixed":
-                continue
-            light.brightness = brightness
-
     def resetPaths(self):
         pass
 
@@ -246,56 +247,10 @@ class Simulator():
         for shape in self.shapes:
             shape.draw(canvas)
         for light in self.lights:
-            if light.type != "fixed":
-                continue 
-            x, y, brightness, color = (canvas.pos_x(light.x),
-                                       canvas.pos_y(light.y),
-                                       light.brightness * canvas.scale,
-                                       light.color)
-            canvas.drawCircle(x, y, brightness, fill=color, outline="orange")
+            light.draw(canvas)
         for robot in self.robots:
             robot.draw(canvas)
-
-    def resetLights(self, brightness, width, height):
-        """
-        Randomly relocate all lights in the environment within the
-        bounding box defined by the given width and height.  Make sure
-        that they are not too close to the edge of the bounding box.
-        """
-        for light in self.lights:
-            if light.type != "fixed":
-                continue
-            light.x = 0.5 + random.random() * (width-1)
-            light.y = 0.5 + random.random() * (height-1)
-            light.brightness = brightness
-            light.rgb = colorMap[light.color]
-
-    def resetLightsToValues(self, brightnessList, width, height):
-        """
-        Randomly relocate all lights in the environment within the
-        bounding box defined by the given width and height.  Make sure
-        that they are not too close to the edge of the bounding box.
-        """
-        for i in range(len(self.lights)):
-            light = self.lights[i]
-            if light.type != "fixed":
-                continue
-            light.x = 0.5 + random.random() * (width-1)
-            light.y = 0.5 + random.random() * (height-1)
-            light.brightness = brightnessList[i]
-            light.rgb = colorMap[light.color]
-
-    def resetLightPositions(self, coords):
-        """
-        Relocate lights in the environment to the given list of
-        coordinates.
-        """
-        for i in range(len(self.lights)):
-            light = self.lights[i]
-            if light.type != "fixed":
-                continue
-            light.x = coords[i][0]
-            light.y = coords[i][1]
+        return canvas
 
     def addRobot(self, r, port=None):
         self.robots.append(r)
@@ -754,16 +709,21 @@ class Oval(Shape):
         canvas.drawOval(x1, y1, x2, y2, fill=fill, outline=outline)
 
 def main():
-    from jyro.simulator import Pioneer, Simulator, PioneerFrontSonars, Gripper
+    from jyro.simulator import (Pioneer, Simulator,
+                                PioneerFrontSonars, Gripper,
+                                PioneerFrontLightSensors)
     
     sim = Simulator()
     # (443,466), (22,420), 40.357554)
     sim.addBox(0, 0, 10, 10, wallcolor="white") # meters
     sim.addBox(1, 1, 2, 2, wallcolor="purple")
     sim.addBox(7, 7, 8, 8, wallcolor="purple")
+    ## brightness of 1 is radius 1 meter
+    sim.addLight(7, 7, 4.25, color=Color(255, 255, 0, 64))
     robot = Pioneer("Pioneer", 5.00, 5.00, math.pi / 2) # meters, radians
     robot.addDevice(PioneerFrontSonars(maxRange=4.0))
     robot.addDevice(Gripper())
+    robot.addDevice(PioneerFrontLightSensors())
     sim.addRobot(robot)
     return sim
     
@@ -779,5 +739,6 @@ if __name__ == "__main__":
         for r in sim.robots:
             r.updateDevices()
         print("pose:", sim["Pioneer"].getPose())
+        print("   light:", sim["Pioneer"].device["light"].scan)
         sim.draw(canvas)
         canvas.save("canvas%d.svg" % i)

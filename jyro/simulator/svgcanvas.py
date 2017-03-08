@@ -66,3 +66,6 @@ class SVGCanvas(Canvas):
             return self._canvas.convert(format="png", **attribs)
         else: # try it:
             return self._canvas.convert(format=format.lower(), **attribs)
+
+    def _repr_svg_(self):
+        return self._canvas._repr_svg_()

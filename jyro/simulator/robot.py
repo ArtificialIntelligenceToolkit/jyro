@@ -121,15 +121,12 @@ class Robot():
     def move(self, vx, va):
         self.vx = vx
         self.va = va
-        return "ok"
 
     def rotate(self, va):
         self.va = va
-        return "ok"
 
     def translate(self, vx):
         self.vx = vx
-        return "ok"
 
     def getPose(self):
         """ Returns global coordinates. """
@@ -148,29 +145,6 @@ class Robot():
         for device in self.devices:
             if device.active:
                 device.update(self)
-
-    def eat(self, amt):
-        for light in self.simulator.lights:
-            if light.type != "fixed":
-                continue
-            dist = Segment((self._gx, self._gy), (light.x, light.y)).length()
-            radius = max(light.brightness, self.radius)
-            if amt == -1:
-                if light.brightness > 0 and dist <= radius:
-                    light.brightness = 0
-                    light.rgb = colorMap["grey0"]
-                    return 1.0
-            elif amt == -2:
-                if light.brightness > 0 and dist <= radius:
-                    origBrightness = light.brightness
-                    light.brightness = 0
-                    light.rgb = colorMap["grey0"]
-                    return origBrightness
-            elif dist <= radius and amt/1000.0 <= light.brightness:
-                light.brightness -= amt/1000.0
-                self.energy += amt
-                return amt
-        return 0.0
 
     def step(self, timeslice=100):
         """
@@ -294,8 +268,6 @@ class Robot():
     def addDevice(self, dev):
         self.devices.append(dev)
         self.device[dev.type] = dev
-        if dev.type == "bulb":
-            self.simulator.lights.append( dev )
         dev.robot = self
 
 class Blimp(Robot):
