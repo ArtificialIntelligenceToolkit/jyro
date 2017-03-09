@@ -97,10 +97,11 @@ class LightSensor():
                 seg = Segment((x,y), (gx, gy))
                 a = -seg.angle() + PIOVER2
                 # see if line between sensor and light is blocked by any boundaries (ignore other bb)
-                dist,hit,obj = robot.simulator.castRay(robot, x, y, a, seg.length() - .1,
+                dist_to_light = seg.length()
+                dist,hit,obj = robot.simulator.castRay(robot, x, y, a, dist_to_light - .1,
                                                        ignoreRobot = "other", rayType = "light")
                 # compute distance of segment; value is sqrt of that?
-                intensity = (1.0 / (seg.length() * seg.length()))
+                intensity = (1.0 / (dist_to_light * dist_to_light))
                 if not hit: # no hit means it has a clear shot:
                     robot.drawRay("light", x, y, gx, gy, "orange")
                     ## Add 0.75 for direct light if not blocked
