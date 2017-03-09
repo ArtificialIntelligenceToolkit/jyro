@@ -189,14 +189,16 @@ class Simulator():
     def update(self):
         pass
 
-    def addBox(self, ulx, uly, lrx, lry, wallcolor="white"):
+    def addBox(self, ulx, uly, lrx, lry, fill="purple", wallcolor=None):
+        if wallcolor is None:
+            wallcolor = fill
         ulx, lrx = min(ulx, lrx), max(ulx, lrx)
         uly, lry = max(uly, lry), min(uly, lry)
         self.addWall( ulx, uly, ulx, lry, wallcolor)
         self.addWall( ulx, uly, lrx, uly, wallcolor)
         self.addWall( ulx, lry, lrx, lry, wallcolor)
         self.addWall( lrx, uly, lrx, lry, wallcolor)
-        self.addShape(Box((ulx, uly), (lrx, lry), fill=wallcolor))
+        self.addShape(Box((ulx, uly), (lrx, lry), fill=fill, outline=wallcolor))
 
     def addWall(self, x1, y1, x2, y2, color="black"):
         seg = Segment((x1, y1), (x2, y2), len(self.world) + 1, "wall")
@@ -709,21 +711,22 @@ class Oval(Shape):
         canvas.drawOval(x1, y1, x2, y2, fill=fill, outline=outline)
 
 def main():
-    from jyro.simulator import (Pioneer, Simulator,
+    from jyro.simulator import (Pioneer, Simulator, Camera,
                                 PioneerFrontSonars, Gripper,
                                 PioneerFrontLightSensors)
     
     sim = Simulator()
     # (443,466), (22,420), 40.357554)
-    sim.addBox(0, 0, 10, 10, wallcolor="white") # meters
-    sim.addBox(1, 1, 2, 2, wallcolor="purple")
-    sim.addBox(7, 7, 8, 8, wallcolor="purple")
+    sim.addBox(0, 0, 10, 10, fill="white", wallcolor="grey") # meters
+    sim.addBox(1, 1, 2, 2, "purple")
+    sim.addBox(7, 7, 8, 8, "purple")
     ## brightness of 1 is radius 1 meter
     sim.addLight(7, 7, 4.25, color=Color(255, 255, 0, 64))
     robot = Pioneer("Pioneer", 5.00, 5.00, math.pi / 2) # meters, radians
     robot.addDevice(PioneerFrontSonars(maxRange=4.0))
     robot.addDevice(Gripper())
     robot.addDevice(PioneerFrontLightSensors())
+    robot.addDevice(Camera())
     sim.addRobot(robot)
     return sim
     
@@ -734,7 +737,7 @@ if __name__ == "__main__":
     print("pose:", sim["Pioneer"].getPose())
     sim["Pioneer"].move(1, 1)
     canvas = SVGCanvas((400, 400))
-    for i in range(500):
+    for i in range(1):
         sim.step()
         for r in sim.robots:
             r.updateDevices()

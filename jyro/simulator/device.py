@@ -1,4 +1,5 @@
 from jyro.simulator.simulator import Segment
+from jyro.simulator.color import colorMap, colorCode, colorNames
 
 import math
 
@@ -209,54 +210,33 @@ class Gripper():
         self.scan[3] = self.isOpened()
         self.scan[4] = self.isMoving()
     
-class PTZ():
-    def __init__(self, camera):
-        self.type = "ptz"
-        self.camera = camera
-        self.active = 1
-
-    def setPose(self, p=None, t=None, z=None):
-        if p != None:
-            self.camera.pan = p * PIOVER180
-        if z != None:
-            self.camera.zoom = z * PIOVER180
-        self.camera.startAngle = self.camera.pan + self.camera.zoom/2
-        self.camera.stopAngle = self.camera.pan - self.camera.zoom/2
-        return "ok"
-
-    def getPose(self):
-        return self.camera.pan / PIOVER180, 0, self.camera.zoom / PIOVER180
-
-    def update(self, robot):
-        pass
-
 class Camera():
-    def __init__(self, width, height, pan, zoom, x, y, thr):
+    def __init__(self, width=60, height=40, field=120):
+        """
+        field is in degrees
+        """
         self.type = "camera"
         self.active = 1
+        self.depth = 3
         self.scan = []
         self.width = width
         self.height = height
-        self.pan = pan * PIOVER180
-        self.tilt = 0
-        self.zoom = zoom * PIOVER180
-        self.startAngle = self.pan + self.zoom/2
-        self.stopAngle = self.pan - self.zoom/2
-        self.pose = (x, y, thr)
+        self.field = field
+        self.startAngle = (self.field * PIOVER180)/2
         self.color = [[0,0,0] for i in range(self.width)]
         self.range = [0 for i in range(self.width)]
 
     def update(self, robot):
         x, y = robot._gx, robot._gy # camera location
-        stepAngle = self.zoom / float(self.width - 1)
+        stepAngle = (self.field * PIOVER180) / float(self.width - 1)
         a = self.startAngle
         self.scan = []
         for i in range(self.width):
             # FIX: move camera to self.pose; currently assumes robot center
             ga = (robot._ga + a)
-            dist,hit,obj = robot.simulator.castRay(robot, x, y, -ga,
-                                                   ignoreRobot="self",
-                                                   rayType = "camera")
+            dist, hit, obj = robot.simulator.castRay(robot, x, y, -ga,
+                                                     ignoreRobot="self",
+                                                     rayType="camera")
             if obj != None:
                 if i in [0, self.width - 1]:
                     robot.drawRay("camera", x, y, hit[0], hit[1], "purple")
@@ -269,6 +249,22 @@ class Camera():
             else:
                 self.scan.append((None, None))
             a -= stepAngle
+
+    def getData(self):
+        import numpy as np
+        import PIL
+        self.data = [128 for i in range(self.height * self.width * 3)]
+        for w in range(self.width):
+            (color, height) = self.scan[w]
+            if color == None or height == None:
+                continue
+            ccode = colorMap[colorNames[color]]
+            for h in range(int(round(height))):
+                for d in range(self.depth):
+                    self.data[(w + int(self.height/2 - h) * self.width) * self.depth + d] = ccode[d]
+                    self.data[(w + int(self.height/2 + h) * self.width) * self.depth + d] = ccode[d]
+        data = np.array(self.data).reshape(self.height, self.width, self.depth).astype(np.uint8)
+        return PIL.Image.fromarray(data, mode="RGB") # saves as gif ok!
 
 class PioneerFrontSonars(RangeSensor):
     def __init__(self, maxRange=8.0, noise=0.0):

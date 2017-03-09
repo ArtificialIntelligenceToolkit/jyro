@@ -102,7 +102,7 @@ class Robot():
         self.y += dx * cos_local90 - dy * sin_local90
         self.x += dx * sin_local90 + dy * cos_local90
         self._gx, self._gy = x, y
-        if a != None:
+        if a is not None:
             self.setAngle(a)
 
     def setAngle(self, a):
@@ -115,8 +115,9 @@ class Robot():
     def setPose(self, x, y, a=None):
         self._gx = x
         self._gy = y
-        if a:
+        if a is not None:
             self._ga = a % (2 * math.pi) # keep in the positive range
+        self.updateDevices()
             
     def move(self, vx, va):
         self.vx = vx
