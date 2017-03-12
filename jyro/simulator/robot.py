@@ -361,7 +361,10 @@ class Pioneer(Robot):
                                    self._gy + x * sin_a90 + y * cos_a90),
                      sx, sy)
             xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
-            canvas.drawPolygon(xy, fill=self.color, outline=self.color)
+            if self.stall:
+                canvas.drawPolygon(xy, fill="white", outline="black")
+            else:
+                canvas.drawPolygon(xy, fill=self.color, outline=self.color)
             bx = [ .14, .06, .06, .14] # front camera
             by = [-.06, -.06, .06, .06]
             xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
