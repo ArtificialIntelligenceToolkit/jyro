@@ -44,6 +44,9 @@ class RangeSensor():
             ga = (robot._ga + a)
             gx = robot._gx + (x * cos_a90 - y * sin_a90)
             gy = robot._gy + (x * sin_a90 + y * cos_a90)
+            if robot.simulator is None:
+                self.scan[i] = 0
+                continue
             dist, hit, obj = robot.simulator.castRay(robot, gx, gy, -ga, self.maxRange)
             if hit:
                 robot.drawRay(self.type, gx, gy, hit[0], hit[1], "black")
@@ -85,6 +88,9 @@ class LightSensor():
             gy = robot._gy + (d_x * sin_a90 + d_y * cos_a90)
             sum = 0.0
             rgb = [0, 0, 0]
+            if robot.simulator is None:
+                self.scan[i] = 0
+                continue
             for light in robot.simulator.lights: # for each light source:
                 x, y, brightness, light_rgb = light.x, light.y, light.brightness, light.rgb
                 # "bulb"
@@ -197,6 +203,9 @@ class Gripper():
             gy = robot._gy + (x * sin_a90 + y * cos_a90)
             ogx = robot._gx + (x * cos_a90 + y * sin_a90)
             ogy = robot._gy + (x * sin_a90 - y * cos_a90)
+            if robot.simulator is None:
+                self.scan[i] = 0
+                continue
             dist,hit,obj = robot.simulator.castRay(robot, gx, gy, -robot._ga + PIOVER2, 2 * y,
                                                   rayType = "breakBeam")
             if hit:
@@ -235,6 +244,9 @@ class Camera():
         for i in range(self.width):
             # FIX: move camera to self.pose; currently assumes robot center
             ga = (robot._ga + a)
+            if robot.simulator is None:
+                self.scan.append((None, None))
+                continue
             dist, hit, obj = robot.simulator.castRay(robot, x, y, -ga,
                                                      ignoreRobot="self",
                                                      rayType="camera")
@@ -251,7 +263,7 @@ class Camera():
                 self.scan.append((None, None))
             a -= stepAngle
 
-    def getData(self):
+    def getImage(self):
         import numpy as np
         import PIL
         self.data = [128 for i in range(self.height * self.width * 3)]

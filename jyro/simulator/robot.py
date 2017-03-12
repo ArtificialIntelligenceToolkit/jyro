@@ -18,11 +18,8 @@ class Robot():
         self.type = "robot"
         self.proposePosition = 0 # used to check for obstacles before moving
         self.stepScalar = 1.0 # normally = 1.0
-        self._gx = x
-        self._gy = y
-        self._ga = a
         self._xya = (x, y, a) # original, for reset
-        self.x, self.y, self.a = (0.0, 0.0, 0.0) # localize
+        self.reset()
         self.boundingBox = boundingBox # ((x1, x2), (y1, y2)) NOTE: Xs then Ys of bounding box
         self.boundingSeg = []
         if boundingBox != []:
@@ -34,18 +31,25 @@ class Robot():
         self.devices = []
         self.device = defaultdict(lambda: None)
         self.simulator = None # will be set when added to simulator
-        self.vx, self.vy, self.va = (0.0, 0.0, 0.0) # meters / second, rads / second
-        self.friction = 1.0
         # -1: don't automatically turn display on when subscribing:
         self.display = {"body": 1, "boundingBox": 0, "gripper": -1, "camera": 0, "sonar": 0,
                         "light": -1, "lightBlocked": 0, "trail": -1, "ir": -1, "bumper": 1,
                         "speech": 1}
-        self.stall = 0
-        self.energy = 10000.0
-        self.maxEnergyCostPerStep = 1.0
-        self.sayText = ""
         self.shapes = []
         self.addDevice(Device("speech"))
+
+    def brain(self):
+        pass
+            
+    def reset(self):
+        self._gx, self._gy, self._ga = self._xya
+        self.stall = 0
+        self.energy = 10000.0
+        self.x, self.y, self.a = (0.0, 0.0, 0.0) # localize
+        self.maxEnergyCostPerStep = 1.0
+        self.sayText = ""
+        self.friction = 1.0
+        self.vx, self.vy, self.va = (0.0, 0.0, 0.0) # meters / second, rads / second
         
     def drawRay(self, dtype, x1, y1, x2, y2, color):
         self.shapes.append(Line((x1, y1), (x2, y2), outline=color))
@@ -270,6 +274,7 @@ class Robot():
         self.devices.append(dev)
         self.device[dev.type] = dev
         dev.robot = self
+        dev.update(self)
 
 class Blimp(Robot):
     def __init__(self, *args, **kwargs):

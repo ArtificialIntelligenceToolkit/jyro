@@ -40,15 +40,16 @@ def normRad(x):
 
 class Light():
     def __init__(self, x, y, brightness, color):
-        self.x = x
-        self.y = y
-        self.brightness = brightness
+        self._xyb = (x, y, brightness)
+        self.reset()
         self.color = color
-        self._xyb = self.x, self.y, self.brightness
         if isinstance(self.color, str):
             self.rgb = colorMap[self.color]
         else:
             self.rgb = self.color
+
+    def reset(self):
+        self.x, self.y, self.brightness = self._xyb
 
     def draw(self, canvas):
         x, y, brightness, color = (canvas.pos_x(self.x),
@@ -220,10 +221,10 @@ class Simulator():
 
     def reset(self):
         for r in self.robots:
-            r._gx, r._gy, r._ga = r._xya
-            r.energy = 10000.0
+            r.reset()
+            r.updateDevices()
         for l in self.lights:
-            l.x, l.y, l.brightness = l._xyb
+            l.reset()
 
     def draw(self, canvas, scale=None):
         canvas.max_x = max([segment.start[0] for segment in self.world] +
@@ -264,12 +265,15 @@ class Simulator():
             self.assoc[port] = r
             self.ports.append(port)
 
-    def step(self):
+    def step(self, run_brain=True):
         """
         Advance the world by timeslice milliseconds.
         """
         self.time += (self.timeslice / 1000.0)
         for r in self.robots:
+            # if not running in a thread, call brain now:
+            if run_brain:
+                r.brain()
             collision = r.step(self.timeslice)
         for r in self.robots:
             r.updateDevices()
