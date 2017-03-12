@@ -240,12 +240,10 @@ class Simulator():
                 canvas.scale = min(canvas.width/canvas.max_x, canvas.height/canvas.max_y)
         else:
             canvas.scale = scale
-
         if canvas.height is None:
             canvas.height = canvas.max_y * canvas.scale
         if canvas.width is None:
             canvas.width = canvas.max_x * canvas.scale
-            
         canvas.clear()
         for shape in self.shapes:
             shape.draw(canvas)
@@ -643,6 +641,10 @@ class Box(Shape):
         self.outline = outline
         self.fill = fill
 
+    def max_min(self):
+        return ((max(self.x1, self.x2), max(self.y1, self.y2)),
+                (min(self.x1, self.x2), min(self.y1, self.y2)))
+        
     def draw(self, canvas):
         outline, fill = self.outline, self.fill
         if canvas.display["wireframe"]:
@@ -665,6 +667,12 @@ class Polygon(Shape):
         self.outline = outline
         self.fill = fill
 
+    def max_min(self):
+        return ((max([xy[0] for xy in self.points]),
+                 max([xy[1] for xy in self.points])),
+                (min([xy[0] for xy in self.points]),
+                 min([xy[1] for xy in self.points])))
+        
     def draw(self, canvas):
         outline, fill = self.outline, self.fill
         if canvas.display["wireframe"]:
@@ -685,6 +693,10 @@ class Line(Shape):
         self.outline = outline
         self.fill = fill
 
+    def max_min(self):
+        return ((max(self.p1[0], self.p2[0]), max(self.p1[1], self.p2[1])),
+                (min(self.p1[0], self.p2[0]), min(self.p1[1], self.p2[1])))
+        
     def draw(self, canvas):
         x1, y1, x2, y2 = (canvas.pos_x(self.p1[0]),
                           canvas.pos_y(self.p1[1]),
@@ -700,6 +712,10 @@ class Oval(Shape):
         self.outline = outline
         self.fill = fill
 
+    def max_min(self):
+        return ((max(self.p1[0], self.p2[0]), max(self.p1[1], self.p2[1])),
+                (min(self.p1[0], self.p2[0]), min(self.p1[1], self.p2[1])))
+        
     def draw(self, canvas):
         outline, fill = self.outline, self.fill
         if canvas.display["wireframe"]:

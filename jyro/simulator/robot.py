@@ -1,4 +1,5 @@
 from jyro.simulator.simulator import Segment, Line
+from jyro.simulator.svgcanvas import SVGCanvas
 from jyro.simulator.device import Device
 
 import math
@@ -50,6 +51,18 @@ class Robot():
         self.sayText = ""
         self.friction = 1.0
         self.vx, self.vy, self.va = (0.0, 0.0, 0.0) # meters / second, rads / second
+
+    def _repr_svg_(self):
+        canvas = SVGCanvas((240, 240))
+        canvas.max_x = 1.0 # meters
+        canvas.max_y = 1.0 # meters
+        canvas.scale = min(canvas.width/canvas.max_x, canvas.height/canvas.max_y)
+        xya = self._gx, self._gy, self._ga
+        self._gx, self._gy, self._ga = (0.5, 0.5, 0)
+        self.draw(canvas)
+        svg = canvas._repr_svg_()
+        self._gx, self._gy, self._ga = xya
+        return svg
         
     def drawRay(self, dtype, x1, y1, x2, y2, color):
         self.shapes.append(Line((x1, y1), (x2, y2), outline=color))
@@ -147,6 +160,9 @@ class Robot():
         return None
 
     def updateDevices(self):
+        # FIXME: updateDevices() has side effect:
+        # puts robot.shapes in sim.canvas coords
+        self.shapes[:] = []
         for device in self.devices:
             if device.active:
                 device.update(self)
@@ -345,7 +361,7 @@ class Pioneer(Robot):
                                    self._gy + x * sin_a90 + y * cos_a90),
                      sx, sy)
             xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
-            canvas.drawPolygon(xy, fill=self.color, outline="black")
+            canvas.drawPolygon(xy, fill=self.color, outline=self.color)
             bx = [ .14, .06, .06, .14] # front camera
             by = [-.06, -.06, .06, .06]
             xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
@@ -358,7 +374,13 @@ class Pioneer(Robot):
                 y = canvas.pos_y(self._gy + self.device["bulb"].x * sin_a90 + self.device["bulb"].y * cos_a90)
                 radius = .05
                 canvas.drawOval(x - radius, y - radius, x + radius, y + radius,
-                                        fill=self.color, outline="black")
+                                        fill=self.color, outline=self.color)
+            if self.device["light"]:
+                for (bx, by, ba) in self.device["light"].geometry:
+                    x = canvas.pos_x(self._gx + bx * cos_a90 - by * sin_a90)
+                    y = canvas.pos_y(self._gy + bx * sin_a90 + by * cos_a90)
+                    radius = .025 * canvas.scale
+                    canvas.drawCircle(x, y, radius, fill="yellow", outline="orange")
             if self.device["gripper"]:
                 # draw grippers:
                 # base:

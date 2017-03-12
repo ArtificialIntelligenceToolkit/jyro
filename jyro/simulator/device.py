@@ -2,6 +2,8 @@ from jyro.simulator.simulator import Segment
 from jyro.simulator.color import colorMap, colorCode, colorNames
 
 import math
+import numpy as np
+import PIL
 
 PIOVER180 = math.pi / 180.0
 PIOVER2   = math.pi / 2.0
@@ -35,7 +37,6 @@ class RangeSensor():
     def update(self, robot):
         # measure and draw the new device data:
         # do some computations and save for speed
-        robot.shapes[:] = []
         a90 = robot._ga + PIOVER2
         cos_a90 = math.cos(a90)
         sin_a90 = math.sin(a90)
@@ -49,7 +50,7 @@ class RangeSensor():
                 continue
             dist, hit, obj = robot.simulator.castRay(robot, gx, gy, -ga, self.maxRange)
             if hit:
-                robot.drawRay(self.type, gx, gy, hit[0], hit[1], "black")
+                robot.drawRay(self.type, gx, gy, hit[0], hit[1], "lightblue")
             else:
                 hx, hy = math.sin(-ga) * self.maxRange, math.cos(-ga) * self.maxRange
                 dist = self.maxRange
@@ -264,8 +265,6 @@ class Camera():
             a -= stepAngle
 
     def getImage(self):
-        import numpy as np
-        import PIL
         self.data = [128 for i in range(self.height * self.width * 3)]
         for w in range(self.width):
             (color, height) = self.scan[w]
