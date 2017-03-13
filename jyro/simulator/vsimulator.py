@@ -1,3 +1,4 @@
+import PIL.Image
 import ipywidgets
 from IPython.display import display
 
@@ -6,6 +7,7 @@ from jyro.simulator.svgcanvas import SVGCanvas
 
 class VSimulator():
     def __init__(self, robot=None, worldf=None, size=None):
+        self.current_time = 0.0
         self.robot = robot
         self.worldf = worldf
         self.size = size if size else (240, 240)
@@ -29,31 +31,47 @@ class VSimulator():
         html_canvas = ipywidgets.HTML(value=self.canvas._repr_svg_())
         output = ipywidgets.Output()
         camera_image = ipywidgets.Image(value=self.get_image(), width=240)
-        hbox = ipywidgets.HBox([play, time])
+        update = ipywidgets.Checkbox(description="Update GUI", value=True)
+        hbox = ipywidgets.HBox([play, time, update])
         vbox = ipywidgets.VBox([html_canvas, camera_image, hbox, output])
         play.observe(self.step, 'value')
+        update.observe(self.update_gui, 'value')
         self.widgets.update({
             "play": play,
             "time": time,
             "html_canvas": html_canvas,
             "output": output,
             "camera_image": camera_image,
+            "update": update,
         })
         return vbox
+
+    def update_gui(self, data=None):
+        self.simulator.draw(self.canvas)
+        self.widgets["html_canvas"].value = self.canvas._repr_svg_()
+        if self.simulator.robots and self.simulator.robots[0].device["camera"]:
+            self.widgets["camera_image"].value = self.get_image()
             
     def step(self, data):
+        ## Update Simulator:
         if data["new"] == 0:
             self.simulator.reset()
+            self.current_time = 0.0
+        elif not self.widgets["update"].value:
+            step_size = 50 # each is 0.1 seconds
+            for step in range(step_size):
+                self.simulator.step()
+            self.current_time += step_size/10
         else:
             with self.widgets["output"]:
                 self.simulator.step()
-        self.simulator.draw(self.canvas)
-        self.widgets["html_canvas"].value = self.canvas._repr_svg_()
-        self.widgets["camera_image"].value = self.get_image()
-        self.widgets["time"].value = data["new"]/10.0
+            self.current_time += 0.1
+        ## Update GUI:
+        if self.widgets["update"].value:
+            self.update_gui()
+        self.widgets["time"].value = self.current_time
 
     def get_image(self):
-        import PIL.Image
         if self.simulator.robots and self.simulator.robots[0].device["camera"]:
             image = self.simulator.robots[0].device["camera"].getImage()
         else:
