@@ -230,6 +230,7 @@ class Camera():
         self.active = 1
         self.depth = 3
         self.scan = []
+        self.lights = []
         self.width = width
         self.height = height
         self.field = field
@@ -242,12 +243,21 @@ class Camera():
         stepAngle = (self.field * PIOVER180) / float(self.width - 1)
         a = self.startAngle
         self.scan = []
+        self.lights = []
+        if robot.simulator:
+            for light in robot.simulator.lights:
+                seg = Segment((robot._gx, robot._gy), (light.x, light.y))
+                raw_angle = seg.angle() - PIOVER2
+                angle = raw_angle % (math.pi * 2)
+                diff = (angle - robot._ga) % (math.pi * 2)
+                if (diff <= self.startAngle):
+                    self.lights.append(raw_angle)
         for i in range(self.width):
             # FIX: move camera to self.pose; currently assumes robot center
-            ga = (robot._ga + a)
             if robot.simulator is None:
                 self.scan.append((None, None))
                 continue
+            ga = (robot._ga + a)
             dist, hit, obj = robot.simulator.castRay(robot, x, y, -ga,
                                                      ignoreRobot="self",
                                                      rayType="camera")

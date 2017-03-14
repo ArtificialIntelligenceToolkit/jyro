@@ -26,17 +26,20 @@ class VSimulator():
             self.simulator.addRobot(self.robot)
 
     def create_widgets(self):
+        step = ipywidgets.Button(icon="fa-step-forward")
         play = ipywidgets.Play(max=1000000)
         time = ipywidgets.FloatText(description="Time:")
         html_canvas = ipywidgets.HTML(value=self.canvas._repr_svg_())
         output = ipywidgets.Output()
         camera_image = ipywidgets.Image(value=self.get_image(), width=240)
         update = ipywidgets.Checkbox(description="Update GUI", value=True)
-        hbox = ipywidgets.HBox([play, time, update])
+        hbox = ipywidgets.HBox([step, play, time, update])
         vbox = ipywidgets.VBox([html_canvas, camera_image, hbox, output])
         play.observe(self.step, 'value')
+        step.on_click(lambda data: self.step({"new": 1}))
         update.observe(self.update_gui, 'value')
         self.widgets.update({
+            "step": step,
             "play": play,
             "time": time,
             "html_canvas": html_canvas,
