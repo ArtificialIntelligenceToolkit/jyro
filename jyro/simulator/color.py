@@ -663,7 +663,7 @@ colorMap = {
 colorCode   = {}
 colorNames  = list(colorMap.keys())
 colorNames.sort()
-code = 1
+code = 0
 for n in colorNames:
     colorCode[n] = code
     code += 1

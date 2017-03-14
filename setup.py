@@ -10,7 +10,7 @@ if svem_flag in sys.argv:
     sys.argv.remove(svem_flag)
 
 setup(name='jyro',
-      version='0.0.1',
+      version='0.1.0',
       description='Python tools for robots',
       long_description="Python and Jupyter tools for robots",
       author='Douglas Blank',

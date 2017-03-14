@@ -3,7 +3,8 @@ from jyro.simulator.color import colorMap, colorCode, colorNames
 
 import math
 import numpy as np
-import PIL
+import PIL.Image
+import PIL.ImageDraw
 
 PIOVER180 = math.pi / 180.0
 PIOVER2   = math.pi / 2.0
@@ -247,46 +248,63 @@ class Camera():
         if robot.simulator:
             for light in robot.simulator.lights:
                 seg = Segment((robot._gx, robot._gy), (light.x, light.y))
-                raw_angle = seg.angle() - PIOVER2
-                angle = raw_angle % (math.pi * 2)
-                diff = (angle - robot._ga) % (math.pi * 2)
-                if (diff <= self.startAngle):
-                    self.lights.append(raw_angle)
+                raw_angle = (seg.angle() - PIOVER2) % (math.pi * 2)
+                diff = ((raw_angle - robot._ga + math.pi * 5/2) % (math.pi * 2)) - PIOVER2
+                self.lights.append((diff, seg.length()))
         for i in range(self.width):
             # FIX: move camera to self.pose; currently assumes robot center
             if robot.simulator is None:
-                self.scan.append((None, None))
+                self.scan.append((None, None, None))
                 continue
             ga = (robot._ga + a)
-            dist, hit, obj = robot.simulator.castRay(robot, x, y, -ga,
-                                                     ignoreRobot="self",
-                                                     rayType="camera")
+            distance, hit, obj = robot.simulator.castRay(robot, x, y, -ga,
+                                                         ignoreRobot="self",
+                                                         rayType="camera")
             if obj != None:
                 if i in [0, self.width - 1]:
                     robot.drawRay("camera", x, y, hit[0], hit[1], "purple")
-                dist = (10 - dist)/10.0 # 10 meter range
+                dist = (10 - min(distance, 10))/10.0 # 10 meter range
                 if obj.type == "wall":
                     height = int(min(max((dist ** 2) * self.height/2.0, 1), self.height/2))
                 else:
                     height = int(min(max((dist ** 2) * self.height/4.0, 1), self.height/4))
-                self.scan.append((colorCode[obj.color], height))
+                self.scan.append((colorCode[obj.color], height, dist))
             else:
-                self.scan.append((None, None))
+                self.scan.append((None, None, None))
             a -= stepAngle
 
     def getImage(self):
         self.data = [128 for i in range(self.height * self.width * 3)]
         for w in range(self.width):
-            (color, height) = self.scan[w]
-            if color == None or height == None:
+            (color, height, distance) = self.scan[w]
+            if color is None or height is None or distance is None:
                 continue
-            ccode = colorMap[colorNames[color]]
-            for h in range(int(round(height))):
+            for h in range(self.height):
+                if h < (self.height - height)/2: # sky
+                    ccode = colorMap["lightblue"]
+                    scale = 1.0
+                elif h > self.height - (self.height - height)/2: # ground
+                    ccode = colorMap["antiquewhite"] # FIXME: should be inside of bigbox
+                    scale = 1.0
+                else:
+                    ccode = colorMap[colorNames[color]]
+                    scale = distance
                 for d in range(self.depth):
-                    self.data[(w + int(self.height/2 - h) * self.width) * self.depth + d] = ccode[d]
-                    self.data[(w + int(self.height/2 + h) * self.width) * self.depth + d] = ccode[d]
+                    self.data[(w + h * self.width) * self.depth + d] = ccode[d] * scale
         data = np.array(self.data).reshape(self.height, self.width, self.depth).astype(np.uint8)
-        return PIL.Image.fromarray(data, mode="RGB") # saves as gif ok!
+        img = PIL.Image.fromarray(data, mode="RGB") # saves as gif ok!
+        if self.lights:
+            draw = PIL.ImageDraw.Draw(img)
+            for light in self.lights:
+                diff, d = light # d in meters
+                distance = (10 - min(d, 10))/10.0
+                if abs(diff) < self.startAngle * 1.5: # make a little bigger to show edge of circle
+                    x = self.width/2 - diff/(self.startAngle) * self.width/2
+                    draw.ellipse((x - int(20 * distance),
+                                  20 - int(20 * distance),
+                                  x + int(20 * distance),
+                                  20 + int(20 * distance)), fill=colorMap["yellow"])
+        return img
 
 class PioneerFrontSonars(RangeSensor):
     def __init__(self, maxRange=8.0, noise=0.0):
