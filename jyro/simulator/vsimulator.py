@@ -31,7 +31,7 @@ class VSimulator():
         step = ipywidgets.Button(icon="fa-step-forward")
         clear = ipywidgets.Button(description="Clear")
         play = ipywidgets.Play(max=1000000)
-        time = ipywidgets.Text(description="Time:")
+        time = ipywidgets.Text(description="Time:", value="0.0 seconds")
         html_canvas = ipywidgets.HTML(value=self.canvas._repr_svg_())
         output = ipywidgets.Output()
         camera_image = ipywidgets.Image(value=self.get_image(), width=240)
@@ -99,6 +99,7 @@ class VSimulator():
         x, y, a = self.robot.getPose()
         self.widgets["x"].value = (x/self.canvas.max_x) * 100
         self.widgets["y"].value = (y/self.canvas.max_y) * 100
+        self.widgets["time"].value = "%.2f seconds" % self.simulator.time
         if set_angle:
             self.widgets["pan"].value = 100 - ((a % (math.pi * 2))/(math.pi * 2)) * 100
             
@@ -117,7 +118,6 @@ class VSimulator():
         ## Update GUI:
         if self.widgets["update"].value:
             self.update_gui()
-        self.widgets["time"].value = "%.2f seconds" % self.simulator.time
 
     def get_image(self):
         if self.robot and self.robot.device["camera"]:

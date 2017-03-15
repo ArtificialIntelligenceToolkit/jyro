@@ -42,7 +42,10 @@ class Light():
     def __init__(self, x, y, brightness, color):
         self._xyb = (x, y, brightness)
         self.reset()
-        self.color = color
+        if isinstance(color, str):
+            self.color = colorMap[color]
+        else:
+            self.color = color
         if isinstance(self.color, str):
             self.rgb = colorMap[self.color]
         else:
@@ -638,8 +641,14 @@ class Box(Shape):
         Shape.__init__(self)
         self.x1, self.y1 = ul
         self.x2, self.y2 = lr
-        self.outline = outline
-        self.fill = fill
+        if isinstance(outline, str):
+            self.outline = colorMap[outline]
+        else:
+            self.outline = outline
+        if isinstance(fill, str):
+            self.fill = colorMap[fill]
+        else:
+            self.fill = fill
 
     def max_min(self):
         return ((max(self.x1, self.x2), max(self.y1, self.y2)),
@@ -664,8 +673,14 @@ class Polygon(Shape):
     def __init__(self, points, outline="black", fill="white"):
         Shape.__init__(self)
         self.points = points
-        self.outline = outline
-        self.fill = fill
+        if isinstance(outline, str):
+            self.outline = colorMap[outline]
+        else:
+            self.outline = outline
+        if isinstance(fill, str):
+            self.fill = colorMap[fill]
+        else:
+            self.fill = fill
 
     def max_min(self):
         return ((max([xy[0] for xy in self.points]),
@@ -690,8 +705,14 @@ class Line(Shape):
         Shape.__init__(self)
         self.p1 = p1
         self.p2 = p2
-        self.outline = outline
-        self.fill = fill
+        if isinstance(outline, str):
+            self.outline = colorMap[outline]
+        else:
+            self.outline = outline
+        if isinstance(fill, str):
+            self.fill = colorMap[fill]
+        else:
+            self.fill = fill
 
     def max_min(self):
         return ((max(self.p1[0], self.p2[0]), max(self.p1[1], self.p2[1])),
@@ -709,8 +730,14 @@ class Oval(Shape):
         Shape.__init__(self)
         self.p1 = p1
         self.p2 = p2
-        self.outline = outline
-        self.fill = fill
+        if isinstance(outline, str):
+            self.outline = colorMap[outline]
+        else:
+            self.outline = outline
+        if isinstance(fill, str):
+            self.fill = colorMap[fill]
+        else:
+            self.fill = fill
 
     def max_min(self):
         return ((max(self.p1[0], self.p2[0]), max(self.p1[1], self.p2[1])),

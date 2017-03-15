@@ -238,6 +238,8 @@ class Camera():
         self.startAngle = (self.field * PIOVER180)/2
         self.color = [[0,0,0] for i in range(self.width)]
         self.range = [0 for i in range(self.width)]
+        self.ground_color = colorMap["backgroundgreen"]
+        self.sky_color = colorMap["lightblue"]
 
     def update(self, robot):
         x, y = robot._gx, robot._gy # camera location
@@ -281,14 +283,19 @@ class Camera():
                 continue
             for h in range(self.height):
                 if h < (self.height - height)/2: # sky
-                    ccode = colorMap["lightblue"]
+                    ccode = self.sky_color
                     scale = 1.0
                 elif h > self.height - (self.height - height)/2: # ground
-                    ccode = colorMap["antiquewhite"] # FIXME: should be inside of bigbox
+                    ccode = self.ground_color
                     scale = 1.0
                 else:
-                    ccode = colorMap[colorNames[color]]
+                    ccode = color
                     scale = distance
+                if isinstance(ccode, str): 
+                    ccode = colorMap[ccode]
+                elif isinstance(ccode, int):
+                    ccode = colorMap[colorNames[ccode]]
+                # else it should be a Color
                 for d in range(self.depth):
                     self.data[(w + h * self.width) * self.depth + d] = ccode[d] * scale
         data = np.array(self.data).reshape(self.height, self.width, self.depth).astype(np.uint8)
@@ -303,7 +310,7 @@ class Camera():
                     draw.ellipse((x - int(20 * distance),
                                   20 - int(20 * distance),
                                   x + int(20 * distance),
-                                  20 + int(20 * distance)), fill=colorMap["yellow"])
+                                  20 + int(20 * distance)), fill=tuple(colorMap["yellow"]))
         return img
 
 class PioneerFrontSonars(RangeSensor):
