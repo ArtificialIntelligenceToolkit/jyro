@@ -50,7 +50,7 @@ class VSimulator():
         controls = ipywidgets.HBox([step, play, clear])
         vbox = ipywidgets.VBox([title, controls, output])
         play.observe(self.step, 'value')
-        step.on_click(lambda data: self.step({"new": 1}))
+        step.on_click(lambda data: self.step({"new": -1})) # signal to step once
         clear.on_click(lambda data: self.widgets["output"].clear_output())
         update.observe(self.update_gui, 'value')
         x.observe(self.set_x, 'value')
@@ -116,8 +116,10 @@ class VSimulator():
             with self.widgets["output"]:
                 self.simulator.step()
         ## Update GUI:
-        if self.widgets["update"].value:
+        if self.widgets["update"].value or data["new"] in [0, -1]: # -1: step; 0: reset
             self.update_gui()
+        else:
+            self.widgets["time"].value = "%.2f seconds" % self.simulator.time
 
     def get_image(self):
         if self.robot and self.robot.device["camera"]:
