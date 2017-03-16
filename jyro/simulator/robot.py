@@ -439,7 +439,7 @@ class Pioneer(Robot):
                     canvas.drawLine(canvas.pos_x(s.start[0], scale),
                                     canvas.pos_y(s.start[1], scale),
                                     canvas.pos_x(s.end[0], scale),
-                                    canvas.pos_x(s.end[1], scale),
+                                    canvas.pos_y(s.end[1], scale),
                                     fill="purple")
         if self.display["speech"] == 1:
             if self.sayText != "":
@@ -452,11 +452,11 @@ class Myro(Robot):
         Robot.__init__(self, *args, **kwargs)
         self.radius = 0.25
 
-    def draw(self, canvas, scale):
+    def draw(self, canvas):
         """
         Draws the body of the robot. Not very efficient.
         """
-        Robot.draw(self, canvas, scale)
+        Robot.draw(self, canvas)
         # Body Polygon, by x and y lists:
         sx = [ .20, .20,-.10,-.10]
         sy = [ .15,-.15,-.15, .15]
@@ -467,7 +467,7 @@ class Myro(Robot):
             xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                    self._gy + x * sin_a90 + y * cos_a90),
                      sx, sy)
-            xy = list(xy)
+            xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
             canvas.drawPolygon(xy, fill=self.color, outline="black")
             # --------------------------------------------------------------------------
             # Parts: wheel, wheel, battery
@@ -486,12 +486,12 @@ class Myro(Robot):
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                        self._gy + x * sin_a90 + y * cos_a90),
                          bx[i], by[i])
-                xy = list(xy)
+                xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
                 canvas.drawPolygon(xy, fill=colors[i])
             # --------------------------------------------------------------------------
             if self.device["bulb"]:
-                x = (self._gx + self.device["bulb"].x * cos_a90 - self.device["bulb"].y * sin_a90)
-                y = (self._gy + self.device["bulb"].x * sin_a90 + self.device["bulb"].y * cos_a90)
+                x = canvas.pos_x(self._gx + self.device["bulb"].x * cos_a90 - self.device["bulb"].y * sin_a90)
+                y = canvas.pos_y(self._gy + self.device["bulb"].x * sin_a90 + self.device["bulb"].y * cos_a90)
                 radius = .04
                 canvas.drawOval(x - radius, y - radius, x + radius, y + radius,
                                         fill=self.color, outline="black")
@@ -514,7 +514,7 @@ class Myro(Robot):
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                        self._gy + x * sin_a90 + y * cos_a90),
                          xs, ys)
-                xy = list(xy)
+                xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
                 canvas.drawPolygon(xy, fill="black", outline="black")
                 # right arm:
                 xs = []
@@ -526,19 +526,20 @@ class Myro(Robot):
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                        self._gy + x * sin_a90 + y * cos_a90),
                          xs, ys)
-                xy = list(xy)
+                xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
                 canvas.drawPolygon(xy, fill="black", outline="black")
         if self.display["boundingBox"] == 1:
             if self.boundingBox != []:
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                        self._gy + x * sin_a90 + y * cos_a90),
                          self.boundingBox[0], self.boundingBox[1])
+                xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
                 canvas.drawPolygon(xy, fill="", outline="purple")
             if self.boundingSeg != []:
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                        self._gy + x * sin_a90 + y * cos_a90),
                          self.boundingSeg[0], self.boundingSeg[1])
-                xy = list(xy)
+                xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
                 for i in range(0, len(xy), 2):
                     canvas.drawLine(xy[i][0], xy[i][1],
                                             xy[i + 1][0], xy[i + 1][1],
@@ -546,7 +547,11 @@ class Myro(Robot):
             additionalSegments = self.additionalSegments(self._gx, self._gy, cos_a90, sin_a90)
             if additionalSegments != []:
                 for s in additionalSegments:
-                    canvas.drawLine(s.start[0], s.start[1], s.end[0], s.end[1],
-                                            fill="purple")
+                    canvas.drawLine(
+                        canvas.pos_x(s.start[0], scale),
+                        canvas.pos_y(s.start[1], scale),
+                        canvas.pos_x(s.end[0], scale),
+                        canvas.pos_y(s.end[1], scale),
+                        fill="purple")
 
 

@@ -8,7 +8,7 @@ from jyro.simulator.svgcanvas import SVGCanvas
 import math
 
 class VSimulator():
-    def __init__(self, robot=None, worldf=None, size=None):
+    def __init__(self, robot=None, worldf=None, size=None, gamepad=False):
         self.robot = robot
         self.worldf = worldf
         self.size = size if size else (240, 240)
@@ -16,9 +16,9 @@ class VSimulator():
         self.reset()
         self.widgets = {}
         self.simulator.draw(self.canvas)
-        display(self.create_widgets())
+        display(self.create_widgets(gamepad))
         self.update_gui()
-        
+
     def reset(self):
         self.simulator = Simulator()
         if self.worldf is not None:
@@ -27,7 +27,7 @@ class VSimulator():
             self.robot.reset()
             self.simulator.addRobot(self.robot)
 
-    def create_widgets(self):
+    def create_widgets(self, gamepad=False):
         step = ipywidgets.Button(icon="fa-step-forward")
         clear = ipywidgets.Button(description="Clear")
         play = ipywidgets.Play(max=1000000)
@@ -43,10 +43,20 @@ class VSimulator():
              x])
         pan = ipywidgets.FloatSlider(readout=False, orientation="horizontal")
         camera_image_with_sliders = ipywidgets.VBox([camera_image, pan])
-        horz = ipywidgets.HBox([html_canvas_with_sliders,
-                                camera_image_with_sliders])
-        title = ipywidgets.VBox([ipywidgets.HBox([update, time]),
-                                 horz])
+        row1 = [html_canvas_with_sliders, camera_image_with_sliders]
+        if gamepad:
+            gamepad = ipywidgets.Controller()
+            def init_gamepad(data):
+                if len(data["owner"].buttons) != 0:
+                    data["owner"].buttons[0].observe(lambda data: self.robot.device["gripper"].open())
+                    data["owner"].buttons[1].observe(lambda data: self.robot.device["gripper"].close())
+                    data["owner"].axes[1].observe(lambda data: self.robot.move(-data["new"], 0), 'value')
+                    data["owner"].axes[0].observe(lambda data: self.robot.move(0, -data["new"]), 'value')
+                    data["owner"].unobserve(init_gamepad)
+            gamepad.observe(init_gamepad)
+            row1.append(gamepad)
+        horz = ipywidgets.HBox(row1)
+        title = ipywidgets.VBox([ipywidgets.HBox([update, time]), horz])
         controls = ipywidgets.HBox([step, play, clear])
         vbox = ipywidgets.VBox([title, controls, output])
         play.observe(self.step, 'value')
@@ -70,6 +80,7 @@ class VSimulator():
             "pan": pan,
             "x": x,
             "y": y,
+            "gamepad": gamepad,
         })
         return vbox
 
@@ -78,19 +89,19 @@ class VSimulator():
         new_x = data["new"]/100 * self.canvas.max_x # 0 to 100
         self.robot.setPose(new_x, y, a)
         self.update_gui()
-    
+
     def set_y(self, data):
         x, y, a = self.robot.getPose()
         new_y = data["new"]/100 * self.canvas.max_y # 0 to 100
         self.robot.setPose(x, new_y, a)
         self.update_gui()
-    
+
     def set_a(self, data):
         x, y, a = self.robot.getPose()
         new_a = (100 - data["new"])/100 * math.pi * 2
         self.robot.setPose(x, y, new_a)
         self.update_gui(set_angle=False)
-    
+
     def update_gui(self, data=None, set_angle=True):
         self.simulator.draw(self.canvas)
         self.widgets["html_canvas"].value = self.canvas._repr_svg_()
@@ -102,7 +113,7 @@ class VSimulator():
         self.widgets["time"].value = "%.2f seconds" % self.simulator.time
         if set_angle:
             self.widgets["pan"].value = 100 - ((a % (math.pi * 2))/(math.pi * 2)) * 100
-            
+
     def step(self, data):
         ## Update Simulator:
         if data["new"] == 0:
