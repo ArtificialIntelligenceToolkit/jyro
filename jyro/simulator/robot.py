@@ -53,13 +53,21 @@ class Robot():
         self.vx, self.vy, self.va = (0.0, 0.0, 0.0) # meters / second, rads / second
 
     def _repr_svg_(self):
+        from jyro.simulator import Simulator
         canvas = SVGCanvas((240, 240))
         canvas.max_x = 1.0 # meters
         canvas.max_y = 1.0 # meters
         canvas.scale = min(canvas.width/canvas.max_x, canvas.height/canvas.max_y)
         xya = self._gx, self._gy, self._ga
         self._gx, self._gy, self._ga = (0.5, 0.5, 0)
+        remove_sim = False
+        if self.simulator is None:
+            self.simulator = Simulator() # for drawings
+            self.updateDevices() # ASSUME: if old sim, it is up to date (self.shapes are there)
+            remove_sim = True
         self.draw(canvas)
+        if remove_sim:
+            self.simulator = None
         svg = canvas._repr_svg_()
         self._gx, self._gy, self._ga = xya
         return svg
@@ -291,6 +299,7 @@ class Robot():
         self.device[dev.type] = dev
         dev.robot = self
         dev.update(self)
+        return self # so can give nice display with new device visual
 
 class Blimp(Robot):
     def __init__(self, *args, **kwargs):
@@ -303,14 +312,14 @@ class Blimp(Robot):
         a90 = self._ga + PIOVER2 # angle is 90 degrees off for graphics
         cos_a90 = math.cos(a90)
         sin_a90 = math.sin(a90)
-        canvs.remove("robot-%s" % self.name)
-        canvas.drawOval(self._gx - self.radius, self._gy - self.radius,
-                                self._gx + self.radius, self._gy + self.radius,
-                                fill=self.color, outline="blue")
-        x = (self._gx + self.radius * cos_a90 - 0 * sin_a90)
-        y = (self._gy + self.radius * sin_a90 + 0 * cos_a90)
-        canvas.drawLine(self._gx, self._gy, x, y,
-                                fill="blue", width=3)
+        canvas.drawOval(canvas.pos_x(self._gx - self.radius),
+                        canvas.pos_y(self._gy - self.radius),
+                        canvas.pos_x(self._gx + self.radius),
+                        canvas.pos_y(self._gy + self.radius),
+                        fill=self.color, outline="blue")
+        x = canvas.pos_x(self._gx + self.radius * cos_a90 - 0 * sin_a90)
+        y = canvas.pos_y(self._gy + self.radius * sin_a90 + 0 * cos_a90)
+        canvas.drawLine(canvas.pos_x(self._gx), canvas.pos_y(self._gy), x, y, outline="blue", width=3)
 
 class Puck(Robot):
     def __init__(self, *args, **kwargs):
@@ -325,7 +334,10 @@ class Puck(Robot):
         """
         Robot.draw(self, canvas)
         if self.display["body"] == 1:
-            x1, y1, x2, y2 = (self._gx - self.radius), (self._gy - self.radius), (self._gx + self.radius), (self._gy + self.radius)
+            x1, y1, x2, y2 = (canvas.pos_x(self._gx - self.radius),
+                              canvas.pos_y(self._gy - self.radius),
+                              canvas.pos_x(self._gx + self.radius),
+                              canvas.pos_y(self._gy + self.radius))
             canvas.drawOval(x1, y1, x2, y2, fill=self.color, outline="black")
         if self.display["boundingBox"] == 1 and self.boundingBox != []:
             # Body Polygon, by x and y lists:
@@ -335,7 +347,7 @@ class Puck(Robot):
             xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                    self._gy + x * sin_a90 + y * cos_a90),
                      self.boundingBox[0], self.boundingBox[1])
-            xy = list(xy)
+            xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
             canvas.drawPolygon(xy, fill="", outline="purple")
 
 class Pioneer(Robot):
@@ -428,23 +440,23 @@ class Pioneer(Robot):
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                        self._gy + x * sin_a90 + y * cos_a90),
                          self.boundingSeg[0], self.boundingSeg[1])
-                xy = [(canvas.pos_x(x, scale), canvas.pos_y(y, scale)) for (x, y) in list(xy)]
+                xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
                 for i in range(0, len(xy), 2):
                     canvas.drawLine(xy[i][0], xy[i][1],
                                             xy[i + 1][0], xy[i + 1][1],
-                                            fill="purple")
+                                            outline="purple")
             additionalSegments = self.additionalSegments(self._gx, self._gy, cos_a90, sin_a90)
             if additionalSegments != []:
                 for s in additionalSegments:
-                    canvas.drawLine(canvas.pos_x(s.start[0], scale),
-                                    canvas.pos_y(s.start[1], scale),
-                                    canvas.pos_x(s.end[0], scale),
-                                    canvas.pos_y(s.end[1], scale),
-                                    fill="purple")
+                    canvas.drawLine(canvas.pos_x(s.start[0]),
+                                    canvas.pos_y(s.start[1]),
+                                    canvas.pos_x(s.end[0]),
+                                    canvas.pos_y(s.end[1]),
+                                    outline="purple")
         if self.display["speech"] == 1:
             if self.sayText != "":
                 # center of robot:
-                x, y = canvas.pos_x(self._gx, scale), canvas.pos_y(self._gy, scale)
+                x, y = canvas.pos_x(self._gx), canvas.pos_y(self._gy)
                 canvas.drawText(x, y, self.sayText) # % self.name)
 
 class Myro(Robot):
@@ -503,7 +515,7 @@ class Myro(Robot):
                       ((self.device["gripper"].pose[0], self.device["gripper"].openPosition),
                        (self.device["gripper"].pose[0], -self.device["gripper"].openPosition))]
                 canvas.drawLine(xy[0][0], xy[0][1], xy[1][0], xy[1][1],
-                                        fill="black")
+                                        outline="black")
                 # left arm:
                 xs = []
                 ys = []
@@ -543,15 +555,15 @@ class Myro(Robot):
                 for i in range(0, len(xy), 2):
                     canvas.drawLine(xy[i][0], xy[i][1],
                                             xy[i + 1][0], xy[i + 1][1],
-                                            fill="purple")
+                                            outline="purple")
             additionalSegments = self.additionalSegments(self._gx, self._gy, cos_a90, sin_a90)
             if additionalSegments != []:
                 for s in additionalSegments:
                     canvas.drawLine(
-                        canvas.pos_x(s.start[0], scale),
-                        canvas.pos_y(s.start[1], scale),
-                        canvas.pos_x(s.end[0], scale),
-                        canvas.pos_y(s.end[1], scale),
-                        fill="purple")
+                        canvas.pos_x(s.start[0]),
+                        canvas.pos_y(s.start[1]),
+                        canvas.pos_x(s.end[0]),
+                        canvas.pos_y(s.end[1]),
+                        outline="purple")
 
 

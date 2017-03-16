@@ -9,7 +9,15 @@ import math
 
 class VSimulator():
     def __init__(self, robot=None, worldf=None, size=None, gamepad=False):
-        self.robot = robot
+        if robot is None:
+            self.robot = None
+            self.robots = []
+        elif isinstance(robot, list):
+            self.robot = robot[0]
+            self.robots = robot
+        else:
+            self.robot = robot
+            self.robots = [robot]
         self.worldf = worldf
         self.size = size if size else (240, 240)
         self.canvas = SVGCanvas(self.size)
@@ -23,9 +31,9 @@ class VSimulator():
         self.simulator = Simulator()
         if self.worldf is not None:
             self.worldf(self.simulator)
-        if self.robot is not None:
-            self.robot.reset()
-            self.simulator.addRobot(self.robot)
+        for robot in self.robots:
+            robot.reset()
+            self.simulator.addRobot(robot)
 
     def create_widgets(self, gamepad=False):
         step = ipywidgets.Button(icon="fa-step-forward")
