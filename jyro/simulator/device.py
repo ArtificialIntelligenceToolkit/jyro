@@ -20,6 +20,9 @@ class Device():
     def update(self, robot):
         pass
 
+    def draw(self, robot, canvas):
+        pass
+
     def serialize(self, item='all'):
         """
         item = 'all' or 'data'
@@ -30,7 +33,7 @@ class Device():
         d["active"] = self.active
         return d
 
-class RangeSensor():
+class RangeSensor(Device):
     def __init__(self, name, geometry, arc, maxRange, noise=0.0):
         self.type = name
         self.active = 1
@@ -91,7 +94,7 @@ class RangeSensor():
                 self.scan[i] = dist
             i += 1
 
-class LightSensor():
+class LightSensor(Device):
     def __init__(self, geometry, noise=0.0):
         self.type = "light"
         self.active = 1
@@ -166,7 +169,7 @@ class LightSensor():
                 self.rgb[i][c] = min(int(rgb[c]), 255)
             i += 1
 
-class Gripper():
+class Gripper(Device):
     def __init__(self):
         self.type = "gripper"
         self.active = 1
@@ -281,7 +284,7 @@ class Gripper():
         self.scan[3] = self.isOpened()
         self.scan[4] = self.isMoving()
 
-class Camera():
+class Camera(Device):
     def __init__(self, width=60, height=40, field=120):
         """
         field is in degrees
@@ -298,6 +301,18 @@ class Camera():
         self.ground_color = colorMap["backgroundgreen"]
         self.sky_color = colorMap["lightblue"]
 
+    def draw(self, robot, canvas):
+        bx = [ .14, .06, .06, .14] # front camera
+        by = [-.06, -.06, .06, .06]
+        a90 = robot._ga + PIOVER2 # angle is 90 degrees off for graphics
+        cos_a90 = math.cos(a90)
+        sin_a90 = math.sin(a90)
+        xy = map(lambda x, y: (robot._gx + x * cos_a90 - y * sin_a90,
+                               robot._gy + x * sin_a90 + y * cos_a90),
+                 bx, by)
+        xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
+        canvas.drawPolygon(xy, fill="black")
+        
     def serialize(self, item='all'):
         """
         item = 'all' or 'data'

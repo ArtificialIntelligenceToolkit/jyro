@@ -294,6 +294,10 @@ class Robot():
         for shape in self.shapes:
             shape.draw(canvas)
 
+    def drawDevices(self, canvas):
+        for device in self.devices:
+            device.draw(self, canvas)
+
     def addDevice(self, dev):
         self.devices.append(dev)
         self.device[dev.type] = dev
@@ -330,6 +334,7 @@ class Blimp(Robot):
         x = canvas.pos_x(self._gx + self.radius * cos_a90 - 0 * sin_a90)
         y = canvas.pos_y(self._gy + self.radius * sin_a90 + 0 * cos_a90)
         canvas.drawLine(canvas.pos_x(self._gx), canvas.pos_y(self._gy), x, y, outline="blue", width=3)
+        self.drawDevices(canvas)
 
 class Puck(Robot):
     def __init__(self, *args, **kwargs):
@@ -359,6 +364,7 @@ class Puck(Robot):
                      self.boundingBox[0], self.boundingBox[1])
             xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
             canvas.drawPolygon(xy, fill="", outline="purple")
+        self.drawDevices(canvas)
 
 class Pioneer(Robot):
     def __init__(self, name, x, y, a, color="red"):
@@ -387,13 +393,6 @@ class Pioneer(Robot):
                 canvas.drawPolygon(xy, fill="white", outline="black")
             else:
                 canvas.drawPolygon(xy, fill=self.color, outline=self.color)
-            bx = [ .14, .06, .06, .14] # front camera
-            by = [-.06, -.06, .06, .06]
-            xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
-                                   self._gy + x * sin_a90 + y * cos_a90),
-                     bx, by)
-            xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
-            canvas.drawPolygon(xy, fill="black")
             if self.device["bulb"]:
                 x = canvas.pos_x(self._gx + self.device["bulb"].x * cos_a90 - self.device["bulb"].y * sin_a90)
                 y = canvas.pos_y(self._gy + self.device["bulb"].x * sin_a90 + self.device["bulb"].y * cos_a90)
@@ -468,6 +467,7 @@ class Pioneer(Robot):
                 # center of robot:
                 x, y = canvas.pos_x(self._gx), canvas.pos_y(self._gy)
                 canvas.drawText(x, y, self.sayText) # % self.name)
+        self.drawDevices(canvas)
 
 class Myro(Robot):
     def __init__(self, *args, **kwargs):
@@ -575,5 +575,6 @@ class Myro(Robot):
                         canvas.pos_x(s.end[0]),
                         canvas.pos_y(s.end[1]),
                         outline="purple")
+        self.drawDevices(canvas)
 
 
