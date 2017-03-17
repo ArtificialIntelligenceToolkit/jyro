@@ -20,6 +20,16 @@ class Device():
     def update(self, robot):
         pass
 
+    def serialize(self, item='all'):
+        """
+        item = 'all' or 'data'
+        """
+        d = {}
+        if item == 'all':
+            d["type"] = self.type
+        d["active"] = self.active
+        return d
+
 class RangeSensor():
     def __init__(self, name, geometry, arc, maxRange, noise=0.0):
         self.type = name
@@ -31,6 +41,22 @@ class RangeSensor():
         self.noise = noise
         self.groups = {}
         self.scan = [0] * len(geometry) # for data
+
+    def serialize(self, item='all'):
+        """
+        item = 'all' or 'data'
+        """
+        d = {}
+        if item == 'all':
+            d["type"] = self.type
+            d["geometry"] = self.geometry
+            d["arc"] = self.arc
+            d["maxRange"] = self.maxRange
+            d["noise"] = self.noise
+            d["groups"] = self.groups
+        d["scan"] = self.scan[:] # copy
+        d["active"] = self.active
+        return d
 
     def __len__(self):
         return len(self.geometry)
@@ -76,6 +102,23 @@ class LightSensor():
         self.groups = {}
         self.scan = [0] * len(geometry) # for data
         self.rgb = [[0,0,0] for g in geometry]
+
+    def serialize(self, item='all'):
+        """
+        item = 'all' or 'data'
+        """
+        d = {}
+        if item == 'all':
+            d["type"] = self.type
+            d["geometry"] = self.geometry
+            d["arc"] = self.arc
+            d["maxRange"] = self.maxRange
+            d["noise"] = self.noise
+            d["groups"] = self.groups
+        d["scan"] = self.scan[:] # copy
+        d["rgb"] = self.rgb[:] # copy
+        d["active"] = self.active
+        return d
 
     def update(self, robot):
         # for each light sensor:
@@ -139,15 +182,33 @@ class Gripper():
         self.breakBeam = []
         self.storage = []
 
+    def serialize(self, item='all'):
+        """
+        item = 'all' or 'data'
+        """
+        d = {}
+        if item == 'all':
+            d["type"] = self.type
+            d["armLength"] = self.armLength
+            d["openPosition"] = self.openPosition
+            d["closePosition"] = self.closePosition
+        d["scan"] = self.scan[:] # copy
+        d["active"] = self.active
+        d["velocity"] = self.velocity
+        d["pose"] = self.pose
+        d["breakBeam"] = self.breakBeam
+        d["storage"] = self.storage
+        d["state"] = self.state
+        d["armPosition"] = self.armPosition
+        return d
+
     def close(self):
         self.state = "close"
         self.velocity = -0.01
-        return "ok"
 
     def deploy(self):
         self.state = "deploy"
         self.velocity = 0.01
-        return "ok"
 
     def store(self):
         self.state = "store"
@@ -160,12 +221,10 @@ class Gripper():
     def open(self):
         self.state = "open"
         self.velocity = 0.01
-        return "ok"
 
     def stop(self):
         self.state = "stop"
         self.velocity = 0.0
-        return "ok"
 
     def moveWhere(self):
         armPosition = self.armPosition
@@ -221,7 +280,7 @@ class Gripper():
         self.scan[2] = self.isClosed()
         self.scan[3] = self.isOpened()
         self.scan[4] = self.isMoving()
-    
+
 class Camera():
     def __init__(self, width=60, height=40, field=120):
         """
@@ -236,10 +295,26 @@ class Camera():
         self.height = height
         self.field = field
         self.startAngle = (self.field * PIOVER180)/2
-        self.color = [[0,0,0] for i in range(self.width)]
-        self.range = [0 for i in range(self.width)]
         self.ground_color = colorMap["backgroundgreen"]
         self.sky_color = colorMap["lightblue"]
+
+    def serialize(self, item='all'):
+        """
+        item = 'all' or 'data'
+        """
+        d = {}
+        if item == 'all':
+            d["type"] = self.type
+            d["width"] = self.width
+            d["height"] = self.height
+            d["field"] = self.field
+            d["startAngle"] = self.startAngle
+            d["ground_color"] = self.ground_color
+            d["sky_color"] = self.sky_color
+        d["scan"] = self.scan[:] # copy
+        d["active"] = self.active
+        d["lights"] = self.lights[:] # copy
+        return d
 
     def update(self, robot):
         x, y = robot._gx, robot._gy # camera location
@@ -291,7 +366,7 @@ class Camera():
                 else:
                     ccode = color
                     scale = distance
-                if isinstance(ccode, str): 
+                if isinstance(ccode, str):
                     ccode = colorMap[ccode]
                 elif isinstance(ccode, int):
                     ccode = colorMap[colorNames[ccode]]

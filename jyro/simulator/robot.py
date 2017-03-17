@@ -301,6 +301,16 @@ class Robot():
         dev.update(self)
         return self # so can give nice display with new device visual
 
+    def serialize(self, item='all'):
+        """
+        """
+        d = {}
+        d["pose"] = self.getPose()
+        for dname in self.device.keys():
+            if self.device[dname]:
+                d[dname] = self.device[dname].serialize(item)
+        return d
+
 class Blimp(Robot):
     def __init__(self, *args, **kwargs):
         Robot.__init__(self, *args, **kwargs)
