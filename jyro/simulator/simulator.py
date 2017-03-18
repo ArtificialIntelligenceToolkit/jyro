@@ -338,8 +338,8 @@ class Simulator():
                         w.type = r.type
                         w.robot = r
                         segments.append(w)
-                for s in r.additionalSegments(r._gx, r._gy, cos_a90, sin_a90,
-                                              color=r.color, type=r.type, robot=r):
+                for s in r.additionalSegments(False, r._gx, r._gy, cos_a90, sin_a90,
+                                              color=r.color, type=r.type):
                     segments.append(s)
                 for w in segments:
                     retval = w.intersects(seg)

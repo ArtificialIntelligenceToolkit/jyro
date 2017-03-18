@@ -1,6 +1,6 @@
 from jyro.simulator.simulator import Segment, Line
 from jyro.simulator.svgcanvas import SVGCanvas
-from jyro.simulator.device import Device
+from jyro.simulator.device import Speech
 
 import math
 from collections import defaultdict
@@ -17,7 +17,6 @@ class Robot():
             boundingBox = []
         self.name = name.replace(" ", "_")
         self.type = "robot"
-        self.proposePosition = 0 # used to check for obstacles before moving
         self.stepScalar = 1.0 # normally = 1.0
         self._xya = (x, y, a) # original, for reset
         self.reset()
@@ -37,7 +36,7 @@ class Robot():
                         "light": -1, "lightBlocked": 0, "trail": -1, "ir": -1, "bumper": 1,
                         "speech": 1}
         self.shapes = []
-        self.addDevice(Device("speech"))
+        self.addDevice(Speech())
 
     def brain(self):
         pass
@@ -75,26 +74,16 @@ class Robot():
     def drawRay(self, dtype, x1, y1, x2, y2, color):
         self.shapes.append(Line((x1, y1), (x2, y2), outline=color))
                 
-    def additionalSegments(self, x, y, cos_a90, sin_a90, **dict):
+    def additionalSegments(self, propose, x, y, cos_a90, sin_a90, **dict):
+        """
+        propose is where it would go, if moved with device velocity, etc.
+        """
         # dynamic segments
         retval = []
-        if self.device["gripper"]:
-            g = self.device["gripper"]
-            x1, x2, x3, x4 = g.pose[0], g.pose[0] + g.armLength, g.pose[0], g.pose[0] + g.armLength
-            y1, y2, y3, y4 = g.armPosition, g.armPosition, -g.armPosition,  -g.armPosition
-            if g.robot.proposePosition and g.velocity != 0.0:
-                armPosition, velocity = g.moveWhere()
-                y1, y2, y3, y4 = armPosition, armPosition, -armPosition,  -armPosition
-            xys = map(lambda nx, ny: (x + nx * cos_a90 - ny * sin_a90,
-                                      y + nx * sin_a90 + ny * cos_a90),
-                      (x1, x2, x3, x4), (y1, y2, y3, y4))
-            xys = list(xys)
-            w = [Segment(xys[0], xys[1], type="gripper"),
-                 Segment(xys[2], xys[3], type="gripper")]
-            for s in w:
-                for key in dict:
-                    s.__dict__[key] = dict[key]
-                retval.append(s)
+        for device in self.devices:
+            segs = device.additionalSegments(propose, x, y, cos_a90, sin_a90, **dict)
+            if segs:
+                retval.extend(segs)
         return retval
 
     def addBoundingSeg(self, boundingSeg):
@@ -180,7 +169,6 @@ class Robot():
         Move the robot self.velocity amount, if not blocked.
         """
         self.ovx, self.ovy, self.ova = self.vx, self.vy, self.va
-        self.proposePosition = 1
         gvx = self.ovx * self.stepScalar
         gvy = self.ovy * self.stepScalar
         vx = gvx * math.sin(-self._ga) + gvy * math.cos(-self._ga)
@@ -214,18 +202,13 @@ class Robot():
             for i in range(0, len(xys), 2):
                 bb = Segment( xys[i], xys[i + 1])
                 segments.append(bb)
-        for s in self.additionalSegments(p_x, p_y, cos_a90, sin_a90):
+        for s in self.additionalSegments(True, p_x, p_y, cos_a90, sin_a90):
             segments.append(s)
         for bb in segments:
             # check each segment of the robot's bounding segs for wall obstacles:
             for w in self.simulator.world:
                 if bb.intersects(w):
-                    self.proposePosition = 0
-                    if self.device["gripper"] and self.device["gripper"].velocity != 0:
-                        self.device["gripper"].state = "stop"
-                        self.device["gripper"].velocity = 0
-                    if self.ovx != 0 or self.ovy != 0 or self.ova != 0:
-                        self.stall = 1
+                    self.stall = 1
                     return False # collision
             # check each segment of the robot's bounding box for other robots:
             for r in self.simulator.robots:
@@ -251,34 +234,16 @@ class Robot():
                     for j in range(0, len(r_xys), 2):
                         r_seg = Segment(r_xys[j], r_xys[j + 1])
                         r_segments.append(r_seg)
-                for s in r.additionalSegments(r._gx, r._gy, cos_r_a90, sin_r_a90):
+                for s in r.additionalSegments(False, r._gx, r._gy, cos_r_a90, sin_r_a90):
                     r_segments.append(s)
                 for r_seg in r_segments:
                     bbintersect = bb.intersects(r_seg)
                     if bbintersect:
-                        self.proposePosition = 0
-                        if self.device["gripper"] and self.device["gripper"].velocity != 0:
-                            self.device["gripper"].state = "stop"
-                            self.device["gripper"].velocity = 0
-                        if self.ovx != 0 or self.ovy != 0 or self.ova != 0:
-                            self.stall = 1
+                        self.stall = 1
                         return False # collision
-        self.proposePosition = 0
         # ok! move the robot, if it wanted to move
-        if self.device["gripper"] and self.device["gripper"].velocity != 0:
-            # handle moving paddles
-            d = self.device["gripper"]
-            d.armPosition, d.velocity = d.moveWhere()
-            if d.armPosition == d.openPosition:
-                ## Drop puck:
-                if d.storage != [] and d.state == "deploy":
-                    x = d.pose[0] + d.armLength/2
-                    y = 0
-                    rx, ry = (p_x + x * cos_a90 - y * sin_a90,
-                              p_y + x * sin_a90 + y * cos_a90)
-                    r = d.storage.pop()
-                    r.setPose(rx, ry, 0.0)
-                    d.state = "open"
+        for device in self.devices:
+            device.step()
         if self.friction != 1.0:
             self.ovx *= self.friction
             self.ovy *= self.friction
@@ -293,6 +258,8 @@ class Robot():
     def draw(self, canvas):
         for shape in self.shapes:
             shape.draw(canvas)
+        self.drawRobot(canvas)
+        self.drawDevices(canvas)
 
     def drawDevices(self, canvas):
         for device in self.devices:
@@ -301,7 +268,6 @@ class Robot():
     def addDevice(self, dev):
         self.devices.append(dev)
         self.device[dev.type] = dev
-        dev.robot = self
         dev.update(self)
         return self # so can give nice display with new device visual
 
@@ -321,20 +287,19 @@ class Blimp(Robot):
         self.radius = 0.44 # meters
         self.color = "purple"
 
-    def draw(self, canvas):
-        Robot.draw(self, canvas)
+    def drawRobot(self, canvas):
         a90 = self._ga + PIOVER2 # angle is 90 degrees off for graphics
         cos_a90 = math.cos(a90)
         sin_a90 = math.sin(a90)
-        canvas.drawOval(canvas.pos_x(self._gx - self.radius),
-                        canvas.pos_y(self._gy - self.radius),
-                        canvas.pos_x(self._gx + self.radius),
-                        canvas.pos_y(self._gy + self.radius),
+        radius = self.radius
+        canvas.drawOval(canvas.pos_x(self._gx - radius),
+                        canvas.pos_y(self._gy - radius),
+                        canvas.pos_x(self._gx + radius),
+                        canvas.pos_y(self._gy + radius),
                         fill=self.color, outline="blue")
-        x = canvas.pos_x(self._gx + self.radius * cos_a90 - 0 * sin_a90)
-        y = canvas.pos_y(self._gy + self.radius * sin_a90 + 0 * cos_a90)
+        x = canvas.pos_x(self._gx + radius * cos_a90 - 0 * sin_a90)
+        y = canvas.pos_y(self._gy + radius * sin_a90 + 0 * cos_a90)
         canvas.drawLine(canvas.pos_x(self._gx), canvas.pos_y(self._gy), x, y, outline="blue", width=3)
-        self.drawDevices(canvas)
 
 class Puck(Robot):
     def __init__(self, *args, **kwargs):
@@ -343,16 +308,16 @@ class Puck(Robot):
         self.friction = 0.90
         self.type = "puck"
 
-    def draw(self, canvas):
+    def drawRobot(self, canvas):
         """
         Draws the body of the robot. Not very efficient.
         """
-        Robot.draw(self, canvas)
         if self.display["body"] == 1:
-            x1, y1, x2, y2 = (canvas.pos_x(self._gx - self.radius),
-                              canvas.pos_y(self._gy - self.radius),
-                              canvas.pos_x(self._gx + self.radius),
-                              canvas.pos_y(self._gy + self.radius))
+            radius = self.radius
+            x1, y1, x2, y2 = (canvas.pos_x(self._gx - radius),
+                              canvas.pos_y(self._gy - radius),
+                              canvas.pos_x(self._gx + radius),
+                              canvas.pos_y(self._gy + radius))
             canvas.drawOval(x1, y1, x2, y2, fill=self.color, outline="black")
         if self.display["boundingBox"] == 1 and self.boundingBox != []:
             # Body Polygon, by x and y lists:
@@ -364,7 +329,6 @@ class Puck(Robot):
                      self.boundingBox[0], self.boundingBox[1])
             xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
             canvas.drawPolygon(xy, fill="", outline="purple")
-        self.drawDevices(canvas)
 
 class Pioneer(Robot):
     def __init__(self, name, x, y, a, color="red"):
@@ -373,11 +337,10 @@ class Pioneer(Robot):
                                     (.175, -.175, -.175, .175)), color=color)
         self.radius = 0.4
 
-    def draw(self, canvas):
+    def drawRobot(self, canvas):
         """
         Draws the body of the robot. Not very efficient.
         """
-        Robot.draw(self, canvas)
         # Body Polygon, by x and y lists:
         sx = [.225, .15, -.15, -.225, -.225, -.15, .15, .225]
         sy = [.08, .175, .175, .08, -.08, -.175, -.175, -.08]
@@ -393,51 +356,6 @@ class Pioneer(Robot):
                 canvas.drawPolygon(xy, fill="white", outline="black")
             else:
                 canvas.drawPolygon(xy, fill=self.color, outline=self.color)
-            if self.device["bulb"]:
-                x = canvas.pos_x(self._gx + self.device["bulb"].x * cos_a90 - self.device["bulb"].y * sin_a90)
-                y = canvas.pos_y(self._gy + self.device["bulb"].x * sin_a90 + self.device["bulb"].y * cos_a90)
-                radius = .05
-                canvas.drawOval(x - radius, y - radius, x + radius, y + radius,
-                                        fill=self.color, outline=self.color)
-            if self.device["light"]:
-                for (bx, by, ba) in self.device["light"].geometry:
-                    x = canvas.pos_x(self._gx + bx * cos_a90 - by * sin_a90)
-                    y = canvas.pos_y(self._gy + bx * sin_a90 + by * cos_a90)
-                    radius = .025 * canvas.scale
-                    canvas.drawCircle(x, y, radius, fill="yellow", outline="orange")
-            if self.device["gripper"]:
-                # draw grippers:
-                # base:
-                xy = [(canvas.pos_x(self._gx + x * cos_a90 - y * sin_a90),
-                       canvas.pos_y(self._gy + x * sin_a90 + y * cos_a90)) for (x,y) in
-                      ((self.device["gripper"].pose[0], self.device["gripper"].openPosition),
-                       (self.device["gripper"].pose[0], -self.device["gripper"].openPosition))]
-                canvas.drawLine(xy[0][0], xy[0][1], xy[1][0], xy[1][1],
-                                        outline="black")
-                # left arm:
-                xs = []
-                ys = []
-                xs.append(self.device["gripper"].pose[0]);     ys.append(self.device["gripper"].armPosition + 0.01)
-                xs.append(self.device["gripper"].pose[0] + self.device["gripper"].armLength); ys.append(self.device["gripper"].armPosition + 0.01)
-                xs.append(self.device["gripper"].pose[0] + self.device["gripper"].armLength); ys.append(self.device["gripper"].armPosition - 0.01)
-                xs.append(self.device["gripper"].pose[0]);     ys.append(self.device["gripper"].armPosition - 0.01)
-                xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
-                                       self._gy + x * sin_a90 + y * cos_a90),
-                         xs, ys)
-                xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
-                canvas.drawPolygon(xy, fill="black", outline="black")
-                # right arm:
-                xs = []
-                ys = []
-                xs.append(self.device["gripper"].pose[0]);     ys.append(-self.device["gripper"].armPosition + 0.01)
-                xs.append(self.device["gripper"].pose[0] + self.device["gripper"].armLength); ys.append(-self.device["gripper"].armPosition + 0.01)
-                xs.append(self.device["gripper"].pose[0] + self.device["gripper"].armLength); ys.append(-self.device["gripper"].armPosition - 0.01)
-                xs.append(self.device["gripper"].pose[0]);     ys.append(-self.device["gripper"].armPosition - 0.01)
-                xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
-                                       self._gy + x * sin_a90 + y * cos_a90),
-                         xs, ys)
-                xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
-                canvas.drawPolygon(xy, fill="black", outline="black")
         if self.display["boundingBox"] == 1:
             if self.boundingBox != []:
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
@@ -454,7 +372,7 @@ class Pioneer(Robot):
                     canvas.drawLine(xy[i][0], xy[i][1],
                                             xy[i + 1][0], xy[i + 1][1],
                                             outline="purple")
-            additionalSegments = self.additionalSegments(self._gx, self._gy, cos_a90, sin_a90)
+            additionalSegments = self.additionalSegments(False, self._gx, self._gy, cos_a90, sin_a90)
             if additionalSegments != []:
                 for s in additionalSegments:
                     canvas.drawLine(canvas.pos_x(s.start[0]),
@@ -462,23 +380,16 @@ class Pioneer(Robot):
                                     canvas.pos_x(s.end[0]),
                                     canvas.pos_y(s.end[1]),
                                     outline="purple")
-        if self.display["speech"] == 1:
-            if self.sayText != "":
-                # center of robot:
-                x, y = canvas.pos_x(self._gx), canvas.pos_y(self._gy)
-                canvas.drawText(x, y, self.sayText) # % self.name)
-        self.drawDevices(canvas)
 
 class Myro(Robot):
     def __init__(self, *args, **kwargs):
         Robot.__init__(self, *args, **kwargs)
         self.radius = 0.25
 
-    def draw(self, canvas):
+    def drawRobot(self, canvas):
         """
         Draws the body of the robot. Not very efficient.
         """
-        Robot.draw(self, canvas)
         # Body Polygon, by x and y lists:
         sx = [ .20, .20,-.10,-.10]
         sy = [ .15,-.15,-.15, .15]
@@ -511,45 +422,6 @@ class Myro(Robot):
                 xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
                 canvas.drawPolygon(xy, fill=colors[i])
             # --------------------------------------------------------------------------
-            if self.device["bulb"]:
-                x = canvas.pos_x(self._gx + self.device["bulb"].x * cos_a90 - self.device["bulb"].y * sin_a90)
-                y = canvas.pos_y(self._gy + self.device["bulb"].x * sin_a90 + self.device["bulb"].y * cos_a90)
-                radius = .04
-                canvas.drawOval(x - radius, y - radius, x + radius, y + radius,
-                                        fill=self.color, outline="black")
-            if self.device["gripper"]:
-                # draw grippers:
-                # base:
-                xy = [(self._gx + x * cos_a90 - y * sin_a90,
-                       self._gy + x * sin_a90 + y * cos_a90) for (x,y) in
-                      ((self.device["gripper"].pose[0], self.device["gripper"].openPosition),
-                       (self.device["gripper"].pose[0], -self.device["gripper"].openPosition))]
-                canvas.drawLine(xy[0][0], xy[0][1], xy[1][0], xy[1][1],
-                                        outline="black")
-                # left arm:
-                xs = []
-                ys = []
-                xs.append(self.device["gripper"].pose[0]);     ys.append(self.device["gripper"].armPosition + 0.01)
-                xs.append(self.device["gripper"].pose[0] + self.device["gripper"].armLength); ys.append(self.device["gripper"].armPosition + 0.01)
-                xs.append(self.device["gripper"].pose[0] + self.device["gripper"].armLength); ys.append(self.device["gripper"].armPosition - 0.01)
-                xs.append(self.device["gripper"].pose[0]);     ys.append(self.device["gripper"].armPosition - 0.01)
-                xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
-                                       self._gy + x * sin_a90 + y * cos_a90),
-                         xs, ys)
-                xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
-                canvas.drawPolygon(xy, fill="black", outline="black")
-                # right arm:
-                xs = []
-                ys = []
-                xs.append(self.device["gripper"].pose[0]);     ys.append(-self.device["gripper"].armPosition + 0.01)
-                xs.append(self.device["gripper"].pose[0] + self.device["gripper"].armLength); ys.append(-self.device["gripper"].armPosition + 0.01)
-                xs.append(self.device["gripper"].pose[0] + self.device["gripper"].armLength); ys.append(-self.device["gripper"].armPosition - 0.01)
-                xs.append(self.device["gripper"].pose[0]);     ys.append(-self.device["gripper"].armPosition - 0.01)
-                xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
-                                       self._gy + x * sin_a90 + y * cos_a90),
-                         xs, ys)
-                xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
-                canvas.drawPolygon(xy, fill="black", outline="black")
         if self.display["boundingBox"] == 1:
             if self.boundingBox != []:
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
@@ -566,7 +438,7 @@ class Myro(Robot):
                     canvas.drawLine(xy[i][0], xy[i][1],
                                             xy[i + 1][0], xy[i + 1][1],
                                             outline="purple")
-            additionalSegments = self.additionalSegments(self._gx, self._gy, cos_a90, sin_a90)
+            additionalSegments = self.additionalSegments(False, self._gx, self._gy, cos_a90, sin_a90)
             if additionalSegments != []:
                 for s in additionalSegments:
                     canvas.drawLine(
@@ -575,6 +447,4 @@ class Myro(Robot):
                         canvas.pos_x(s.end[0]),
                         canvas.pos_y(s.end[1]),
                         outline="purple")
-        self.drawDevices(canvas)
-
 

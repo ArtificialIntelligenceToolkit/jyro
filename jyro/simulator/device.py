@@ -33,6 +33,35 @@ class Device():
         d["active"] = self.active
         return d
 
+    def additionalSegments(self, propose, x, y, cos_a90, sin_a90, **dict):
+        """
+        Add dynamic, extra bounding box segments to robot.
+        """
+        pass
+
+    def step(self):
+        pass
+
+class Speech(Device):
+    def __init__(self):
+        Device.__init__(self, "speech")
+        self.sayText = ""
+
+    def draw(self, robot, canvas):
+        if self.sayText != "":
+            # center of robot:
+            x, y = canvas.pos_x(robot._gx), canvas.pos_y(robot._gy)
+            canvas.drawText(x, y, self.sayText) # % self.name)
+    
+    def serialize(self, item='all'):
+        """
+        item = 'all' or 'data'
+        """
+        d = Device.serialize(self, item)
+        if item == 'all':
+            d["sayText"] = self.sayText
+        return d
+
 class RangeSensor(Device):
     def __init__(self, name, geometry, arc, maxRange, noise=0.0):
         self.type = name
@@ -49,9 +78,8 @@ class RangeSensor(Device):
         """
         item = 'all' or 'data'
         """
-        d = {}
+        d = Device.serialize(self, item)
         if item == 'all':
-            d["type"] = self.type
             d["geometry"] = self.geometry
             d["arc"] = self.arc
             d["maxRange"] = self.maxRange
@@ -106,13 +134,22 @@ class LightSensor(Device):
         self.scan = [0] * len(geometry) # for data
         self.rgb = [[0,0,0] for g in geometry]
 
+    def draw(self, robot, canvas):
+        a90 = robot._ga + PIOVER2 # angle is 90 degrees off for graphics
+        cos_a90 = math.cos(a90)
+        sin_a90 = math.sin(a90)
+        for (bx, by, ba) in self.geometry:
+            x = canvas.pos_x(robot._gx + bx * cos_a90 - by * sin_a90)
+            y = canvas.pos_y(robot._gy + bx * sin_a90 + by * cos_a90)
+            radius = .025 * canvas.scale
+            canvas.drawCircle(x, y, radius, fill="yellow", outline="orange")
+
     def serialize(self, item='all'):
         """
         item = 'all' or 'data'
         """
-        d = {}
+        d = Device.serialize(self, item)
         if item == 'all':
-            d["type"] = self.type
             d["geometry"] = self.geometry
             d["arc"] = self.arc
             d["maxRange"] = self.maxRange
@@ -185,13 +222,78 @@ class Gripper(Device):
         self.breakBeam = []
         self.storage = []
 
+    def step(self):
+        self.armPosition, self.velocity = self.moveWhere()
+
+    def additionalSegments(self, propose, x, y, cos_a90, sin_a90, **dict):
+        x1, x2, x3, x4 = self.pose[0], self.pose[0] + self.armLength, self.pose[0], self.pose[0] + self.armLength
+        y1, y2, y3, y4 = self.armPosition, self.armPosition, -self.armPosition,  -self.armPosition
+        if propose and self.velocity != 0.0:
+            armPosition, velocity = self.moveWhere()
+            y1, y2, y3, y4 = armPosition, armPosition, -armPosition,  -armPosition
+        xys = map(lambda nx, ny: (x + nx * cos_a90 - ny * sin_a90,
+                                  y + nx * sin_a90 + ny * cos_a90),
+                  (x1, x2, x3, x4), (y1, y2, y3, y4))
+        xys = list(xys)
+        segs = [Segment(xys[0], xys[1], type="gripper"),
+                Segment(xys[2], xys[3], type="gripper")]
+        # add colors, robots, etc:
+        for s in segs:
+            for key in dict:
+                s.__dict__[key] = dict[key]
+        return segs
+
+    def draw(self, robot, canvas):
+        # draw grippers:
+        # base:
+        a90 = robot._ga + PIOVER2 # angle is 90 degrees off for graphics
+        cos_a90 = math.cos(a90)
+        sin_a90 = math.sin(a90)
+        xy = [(canvas.pos_x(robot._gx + x * cos_a90 - y * sin_a90),
+               canvas.pos_y(robot._gy + x * sin_a90 + y * cos_a90)) for (x,y) in
+              ((self.pose[0], self.openPosition),
+               (self.pose[0], -self.openPosition))]
+        canvas.drawLine(xy[0][0], xy[0][1], xy[1][0], xy[1][1],
+                                outline="black")
+        # left arm:
+        xs = []
+        ys = []
+        xs.append(self.pose[0])
+        ys.append(self.armPosition + 0.01)
+        xs.append(self.pose[0] + self.armLength)
+        ys.append(self.armPosition + 0.01)
+        xs.append(self.pose[0] + self.armLength)
+        ys.append(self.armPosition - 0.01)
+        xs.append(self.pose[0])
+        ys.append(self.armPosition - 0.01)
+        xy = map(lambda x, y: (robot._gx + x * cos_a90 - y * sin_a90,
+                               robot._gy + x * sin_a90 + y * cos_a90),
+                 xs, ys)
+        xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
+        canvas.drawPolygon(xy, fill="black", outline="black")
+        # right arm:
+        xs = []
+        ys = []
+        xs.append(self.pose[0])
+        ys.append(-self.armPosition + 0.01)
+        xs.append(self.pose[0] + self.armLength)
+        ys.append(-self.armPosition + 0.01)
+        xs.append(self.pose[0] + self.armLength)
+        ys.append(-self.armPosition - 0.01)
+        xs.append(self.pose[0])
+        ys.append(-self.armPosition - 0.01)
+        xy = map(lambda x, y: (robot._gx + x * cos_a90 - y * sin_a90,
+                               robot._gy + x * sin_a90 + y * cos_a90),
+                 xs, ys)
+        xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
+        canvas.drawPolygon(xy, fill="black", outline="black")
+
     def serialize(self, item='all'):
         """
         item = 'all' or 'data'
         """
-        d = {}
+        d = Device.serialize(self, item)
         if item == 'all':
-            d["type"] = self.type
             d["armLength"] = self.armLength
             d["openPosition"] = self.openPosition
             d["closePosition"] = self.closePosition
@@ -317,9 +419,8 @@ class Camera(Device):
         """
         item = 'all' or 'data'
         """
-        d = {}
+        d = Device.serialize(self, item)
         if item == 'all':
-            d["type"] = self.type
             d["width"] = self.width
             d["height"] = self.height
             d["field"] = self.field
