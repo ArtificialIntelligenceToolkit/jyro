@@ -30,7 +30,7 @@ class Robot():
         self.colorParts = {"ir": "pink", "sonar": "lightgray", "bumper": "black", "trail": color}
         self.devices = []
         self.device = defaultdict(lambda: None)
-        self.simulator = None # will be set when added to simulator
+        self.physics = None # will be set when added to simulator
         # -1: don't automatically turn display on when subscribing:
         self.display = {"body": 1, "boundingBox": 0, "gripper": -1, "camera": 0, "sonar": 0,
                         "light": -1, "lightBlocked": 0, "trail": -1, "ir": -1, "bumper": 1,
@@ -52,7 +52,7 @@ class Robot():
         self.vx, self.vy, self.va = (0.0, 0.0, 0.0) # meters / second, rads / second
 
     def _repr_svg_(self):
-        from jyro.simulator import Simulator
+        from jyro.simulator import Physics
         canvas = SVGCanvas((240, 240))
         canvas.max_x = 1.0 # meters
         canvas.max_y = 1.0 # meters
@@ -60,13 +60,13 @@ class Robot():
         xya = self._gx, self._gy, self._ga
         self._gx, self._gy, self._ga = (0.5, 0.5, 0)
         remove_sim = False
-        if self.simulator is None:
-            self.simulator = Simulator() # for drawings
+        if self.physics is None:
+            self.physics = Physics() # for drawings
             self.updateDevices() # ASSUME: if old sim, it is up to date (self.shapes are there)
             remove_sim = True
         self.draw(canvas)
         if remove_sim:
-            self.simulator = None
+            self.physics = None
         svg = canvas._repr_svg_()
         self._gx, self._gy, self._ga = xya
         return svg
@@ -206,12 +206,12 @@ class Robot():
             segments.append(s)
         for bb in segments:
             # check each segment of the robot's bounding segs for wall obstacles:
-            for w in self.simulator.world:
+            for w in self.physics.world:
                 if bb.intersects(w):
                     self.stall = 1
                     return False # collision
             # check each segment of the robot's bounding box for other robots:
-            for r in self.simulator.robots:
+            for r in self.physics.robots:
                 if r.name == self.name:
                     continue # don't compare with your own!
                 r_a90 = r._ga + PIOVER2

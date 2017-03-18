@@ -103,10 +103,10 @@ class RangeSensor(Device):
             ga = (robot._ga + a)
             gx = robot._gx + (x * cos_a90 - y * sin_a90)
             gy = robot._gy + (x * sin_a90 + y * cos_a90)
-            if robot.simulator is None:
+            if robot.physics is None:
                 self.scan[i] = 0
                 continue
-            dist, hit, obj = robot.simulator.castRay(robot, gx, gy, -ga, self.maxRange)
+            dist, hit, obj = robot.physics.castRay(robot, gx, gy, -ga, self.maxRange)
             if hit:
                 robot.drawRay(self.type, gx, gy, hit[0], hit[1], "lightblue")
             else:
@@ -173,10 +173,10 @@ class LightSensor(Device):
             gy = robot._gy + (d_x * sin_a90 + d_y * cos_a90)
             sum = 0.0
             rgb = [0, 0, 0]
-            if robot.simulator is None:
+            if robot.physics is None:
                 self.scan[i] = 0
                 continue
-            for light in robot.simulator.lights: # for each light source:
+            for light in robot.physics.lights: # for each light source:
                 x, y, brightness, light_rgb = light.x, light.y, light.brightness, light.rgb
                 # "bulb"
                 #else: # get position from robot:
@@ -189,7 +189,7 @@ class LightSensor(Device):
                 a = -seg.angle() + PIOVER2
                 # see if line between sensor and light is blocked by any boundaries (ignore other bb)
                 dist_to_light = seg.length()
-                dist,hit,obj = robot.simulator.castRay(robot, x, y, a, dist_to_light - .1,
+                dist,hit,obj = robot.physics.castRay(robot, x, y, a, dist_to_light - .1,
                                                        ignoreRobot = "other", rayType = "light")
                 # compute distance of segment; value is sqrt of that?
                 intensity = (1.0 / (dist_to_light * dist_to_light))
@@ -369,10 +369,10 @@ class Gripper(Device):
             gy = robot._gy + (x * sin_a90 + y * cos_a90)
             ogx = robot._gx + (x * cos_a90 + y * sin_a90)
             ogy = robot._gy + (x * sin_a90 - y * cos_a90)
-            if robot.simulator is None:
+            if robot.physics is None:
                 self.scan[i] = 0
                 continue
-            dist,hit,obj = robot.simulator.castRay(robot, gx, gy, -robot._ga + PIOVER2, 2 * y,
+            dist,hit,obj = robot.physics.castRay(robot, gx, gy, -robot._ga + PIOVER2, 2 * y,
                                                   rayType = "breakBeam")
             if hit:
                 self.scan[i] = 1
@@ -438,19 +438,19 @@ class Camera(Device):
         a = self.startAngle
         self.scan = []
         self.lights = []
-        if robot.simulator:
-            for light in robot.simulator.lights:
+        if robot.physics:
+            for light in robot.physics.lights:
                 seg = Segment((robot._gx, robot._gy), (light.x, light.y))
                 raw_angle = (seg.angle() - PIOVER2) % (math.pi * 2)
                 diff = ((raw_angle - robot._ga + math.pi * 5/2) % (math.pi * 2)) - PIOVER2
                 self.lights.append((diff, seg.length()))
         for i in range(self.width):
             # FIX: move camera to self.pose; currently assumes robot center
-            if robot.simulator is None:
+            if robot.physics is None:
                 self.scan.append((None, None, None))
                 continue
             ga = (robot._ga + a)
-            distance, hit, obj = robot.simulator.castRay(robot, x, y, -ga,
+            distance, hit, obj = robot.physics.castRay(robot, x, y, -ga,
                                                          ignoreRobot="self",
                                                          rayType="camera")
             if obj != None:
