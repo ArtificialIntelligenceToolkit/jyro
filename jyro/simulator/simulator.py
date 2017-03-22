@@ -235,7 +235,10 @@ class Physics():
         for l in self.lights:
             l.reset()
 
-    def draw(self, canvas, scale=None):
+    def draw(self, canvas, scale=None, ignore=[]):
+        """
+        ignore can be a list of any of ["shapes", "robots", "lights"]
+        """
         canvas.max_x = max([segment.start[0] for segment in self.world] +
                            [segment.end[0] for segment in self.world])
         canvas.max_y = max([segment.start[1] for segment in self.world] +
@@ -254,12 +257,15 @@ class Physics():
         if canvas.width is None:
             canvas.width = canvas.max_x * canvas.scale
         canvas.clear()
-        for shape in self.shapes:
-            shape.draw(canvas)
-        for light in self.lights:
-            light.draw(canvas)
-        for robot in self.robots:
-            robot.draw(canvas)
+        if "shapes" not in ignore:
+            for shape in self.shapes:
+                shape.draw(canvas)
+        if "lights" not in ignore:
+            for light in self.lights:
+                light.draw(canvas)
+        if "robots" not in ignore:
+            for robot in self.robots:
+                robot.draw(canvas)
         return canvas
 
     def addRobot(self, r, port=None):
