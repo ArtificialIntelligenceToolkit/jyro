@@ -61,12 +61,12 @@ class Light():
         self.x, self.y, self.brightness = self._xyb
 
     def draw(self, canvas):
-        radius = 0.5 # meters
+        radius = 0.25 # meters
         x, y, brightness, color = (canvas.pos_x(self.x),
                                    canvas.pos_y(self.y),
                                    radius * canvas.scale,
                                    self.color)
-        canvas.drawCircle(x, y, brightness, fill=color, outline="orange")
+        canvas.drawCircle(x, y, brightness, fill=color, outline=color)
 
 class Segment():
     """
