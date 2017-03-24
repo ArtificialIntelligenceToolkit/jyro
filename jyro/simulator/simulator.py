@@ -61,9 +61,10 @@ class Light():
         self.x, self.y, self.brightness = self._xyb
 
     def draw(self, canvas):
+        radius = 0.5 # meters
         x, y, brightness, color = (canvas.pos_x(self.x),
                                    canvas.pos_y(self.y),
-                                   self.brightness * canvas.scale,
+                                   radius * canvas.scale,
                                    self.color)
         canvas.drawCircle(x, y, brightness, fill=color, outline="orange")
 
