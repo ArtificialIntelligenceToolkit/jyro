@@ -294,8 +294,7 @@ class Physics():
         self.stepCount += 1
 
     def castRay(self, robot, x1, y1, a, maxRange = MAXRAYLENGTH,
-                ignoreRobot = "self",
-                rayType = "range"):
+                ignoreRobot=["self"], rayType="range"):
         # ignoreRobot: all, self, other;
         hits = []
         x2, y2 = math.sin(a) * maxRange + x1, math.cos(a) * maxRange + y1
@@ -312,13 +311,13 @@ class Physics():
                         hits.append( (dist, retval, w) ) # distance, hit, obj
                 ## Ambient light:
         # go down list of robots, and see if you hit one:
-        if ignoreRobot != "all":
+        if "all" not in ignoreRobot:
             for r in self.robots:
                 # don't hit your own bounding box if ignoreRobot == "self":
-                if r.name == robot.name and ignoreRobot == "self":
+                if r.name == robot.name and "self" in ignoreRobot:
                     continue
                 # don't hit other's bounding box if ignoreRobot == "other":
-                if r.name != robot.name and ignoreRobot == "other":
+                if r.name != robot.name and "other" in ignoreRobot:
                     continue
                 a90 = r._ga + PIOVER2
                 cos_a90 = math.cos(a90)
