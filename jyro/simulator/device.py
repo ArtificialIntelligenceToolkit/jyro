@@ -177,6 +177,7 @@ class LightSensor(Device):
         return d
 
     def update(self, robot):
+        min_dist_meters = 0.2
         # for each light sensor:
         for i in range(len(self.geometry)):
             gx, gy = self.getPose(i)
@@ -189,13 +190,14 @@ class LightSensor(Device):
                 x, y, brightness, light_rgb = light.x, light.y, light.brightness, light.rgb
                 seg = Segment((x,y), (gx, gy))
                 # scaled over distance, but not zero:
-                dist_to_light = max(seg.length(), 0.1) / self.maxRange
+                dist_to_light = min(max(seg.length(), min_dist_meters), self.maxRange) / self.maxRange
+                min_scaled_d = min_dist_meters/self.maxRange
                 if self.useAmbientLight:
-                    maxValueAmbient = 1.0 / (0.1/self.maxRange)
+                    maxValueAmbient = 1.0 / min_scaled_d
                     ambient = (1.0 / dist_to_light) / maxValueAmbient
                     sum += ambient * brightness
                 if self.useDirectLight:
-                    maxValueIntensity = 1.0 / ((0.1/self.maxRange) ** 2)
+                    maxValueIntensity = 1.0 / (min_scaled_d ** 2)
                     intensity = (1.0 / (dist_to_light ** 2)) / maxValueIntensity
                     sum += intensity * brightness
                 a = -seg.angle() + PIOVER2
