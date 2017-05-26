@@ -266,6 +266,7 @@ class Robot():
             device.draw(self, canvas)
 
     def addDevice(self, dev):
+        dev.robot = self
         self.devices.append(dev)
         self.device[dev.type] = dev
         dev.update(self)

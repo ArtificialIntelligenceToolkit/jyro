@@ -123,18 +123,33 @@ class RangeSensor(Device):
             i += 1
 
 class LightSensor(Device):
-    def __init__(self, geometry, noise=0.0):
+    def __init__(self, geometry, maxRange, noise=0.0):
+        """
+        geometry - list of [x, y, a] for each sensor
+        maxRange - range of light, in meters
+        """
         self.type = "light"
         self.active = 1
         self.geometry = geometry
         self.arc = None
-        self.maxRange = 1000.0
+        self.maxRange = maxRange
         self.noise = noise
         self.groups = {}
         self.scan = [0] * len(geometry) # for data
         self.rgb = [[0,0,0] for g in geometry]
         self.ignore = ["self"] # can contain "self", "other", or "all"
+        self.useAmbientLight = True
+        self.useDirectLight = False
 
+    def getPose(self, index):
+        a90 = self.robot._ga + PIOVER2 # angle is 90 degrees off for graphics
+        cos_a90 = math.cos(a90)
+        sin_a90 = math.sin(a90)
+        (bx, by, ba) = self.geometry[index]
+        gx = self.robot._gx + bx * cos_a90 - by * sin_a90
+        gy = self.robot._gy + bx * sin_a90 + by * cos_a90
+        return (gx, gy)
+        
     def draw(self, robot, canvas):
         a90 = robot._ga + PIOVER2 # angle is 90 degrees off for graphics
         cos_a90 = math.cos(a90)
@@ -163,15 +178,8 @@ class LightSensor(Device):
 
     def update(self, robot):
         # for each light sensor:
-        a90 = robot._ga + PIOVER2
-        cos_a90 = math.cos(a90)
-        sin_a90 = math.sin(a90)
-        i = 0
-        for (d_x, d_y, d_a) in self.geometry:
-            # compute total light on sensor, falling off as square of distance
-            # position of light sensor in global coords:
-            gx = robot._gx + (d_x * cos_a90 - d_y * sin_a90)
-            gy = robot._gy + (d_x * sin_a90 + d_y * cos_a90)
+        for i in range(len(self.geometry)):
+            gx, gy = self.getPose(i)
             sum = 0.0
             rgb = [0, 0, 0]
             if robot.physics is None:
@@ -179,33 +187,27 @@ class LightSensor(Device):
                 continue
             for light in robot.physics.lights: # for each light source:
                 x, y, brightness, light_rgb = light.x, light.y, light.brightness, light.rgb
-                # "bulb"
-                #else: # get position from robot:
-                #    if light.robot == robot: continue # don't read the bulb if it is on robot
-                #    ogx, ogy, oga, brightness, color = (light.robot._gx,
-                #                                        light.robot._gy,
-                #                                        light.robot._ga,
-                #                                        light.brightness, light.robot.color)
                 seg = Segment((x,y), (gx, gy))
+                # scaled over distance, but not zero:
+                dist_to_light = max(seg.length(), 0.1) / self.maxRange
+                if self.useAmbientLight:
+                    maxValueAmbient = 1.0 / (0.1/self.maxRange)
+                    ambient = (1.0 / dist_to_light) / maxValueAmbient
+                    sum += ambient * brightness
+                if self.useDirectLight:
+                    maxValueIntensity = 1.0 / ((0.1/self.maxRange) ** 2)
+                    intensity = (1.0 / (dist_to_light ** 2)) / maxValueIntensity
+                    sum += intensity * brightness
                 a = -seg.angle() + PIOVER2
-                # see if line between sensor and light is blocked by any boundaries (ignore other bb)
-                dist_to_light = seg.length()
-                # compute distance of segment; value is sqrt of that?
-                intensity = (1.0 / (dist_to_light * dist_to_light))
-                dist,hit,obj = robot.physics.castRay(robot, x, y, a, dist_to_light - .1,
-                                                     ignoreRobot=self.ignore, rayType="light")
+                dist, hit, obj = robot.physics.castRay(robot, x, y, a, dist_to_light - .1,
+                                                       ignoreRobot=self.ignore, rayType="light")
                 if not hit: # no hit means it has a clear shot:
                     robot.drawRay("light", x, y, gx, gy, "orange")
-                    ## Add 0.75 for direct light if not blocked
-                    sum += min(intensity, 1.0) * brightness * 0.75 * 1000.0
                 else:
                     robot.drawRay("lightBlocked", x, y, hit[0], hit[1], "purple")
-                ## Add 0.25 for ambient light always
-                sum += min(intensity, 1.0) * brightness * 0.25 * 1000.0
-            self.scan[i] = min(sum, self.maxRange)
+            self.scan[i] = sum
             for c in [0, 1, 2]:
                 self.rgb[i][c] = min(int(rgb[c]), 255)
-            i += 1
 
 class Gripper(Device):
     def __init__(self):
@@ -622,9 +624,10 @@ class Pioneer4Sonars(RangeSensor):
                        'back-all' : ( 2, 3)}
 
 class PioneerFrontLightSensors(LightSensor):
-    def __init__(self):
+    def __init__(self, maxRange):
         # make sure outside of bb!
         LightSensor.__init__(self, ((.225,  .175, 0), (.225, -.175, 0)),
+                             maxRange,
                              noise=0.0)
         self.groups = {"front-all": (0, 1),
                        "all": (0, 1),
@@ -643,7 +646,7 @@ class PioneerFrontLightSensors(LightSensor):
                        'back-all' : []}
 
 class Pioneer4FrontLightSensors(LightSensor):
-    def __init__(self):
+    def __init__(self, maxRange):
         # make sure outside of bb!
         LightSensor.__init__(
             self, (
@@ -652,6 +655,7 @@ class Pioneer4FrontLightSensors(LightSensor):
                 (.225, -.0875, 0),
                 (.225, -.175, 0),
             ),
+            maxRange,
             noise=0.0)
         self.groups = {"front-all": (0, 1, 2, 3),
                        "all": (0, 1, 2, 3),
@@ -716,6 +720,7 @@ class MyroBumper(RangeSensor):
 class MyroLightSensors(LightSensor):
     def __init__(self):
         LightSensor.__init__(self, ((.18, .13, 0), (.18, -.13, 0)),
+                             maxRange,
                              noise=0.0)
         self.groups = {"front-all": (0, 1),
                        "all": (0, 1),
