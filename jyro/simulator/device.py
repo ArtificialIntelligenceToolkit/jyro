@@ -197,7 +197,7 @@ class LightSensor(Device):
                 elif self.lightMode == "direct":
                     maxValueIntensity = 1.0 / (min_scaled_d ** 2)
                     intensity = (1.0 / (dist_to_light ** 2)) / maxValueIntensity
-                elif self.lightMode = "linear":
+                elif self.lightMode == "linear":
                     intensity = dist_to_light
                 sum += intensity * brightness
                 a = -seg.angle() + PIOVER2
