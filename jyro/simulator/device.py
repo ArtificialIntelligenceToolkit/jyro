@@ -138,8 +138,7 @@ class LightSensor(Device):
         self.scan = [0] * len(geometry) # for data
         self.rgb = [[0,0,0] for g in geometry]
         self.ignore = ["self"] # can contain "self", "other", or "all"
-        self.useAmbientLight = True
-        self.useDirectLight = False
+        self.lightMode = "linear" # or "direct", "ambient"
 
     def getPose(self, index):
         a90 = self.robot._ga + PIOVER2 # angle is 90 degrees off for graphics
@@ -192,14 +191,15 @@ class LightSensor(Device):
                 # scaled over distance, but not zero:
                 dist_to_light = min(max(seg.length(), min_dist_meters), self.maxRange) / self.maxRange
                 min_scaled_d = min_dist_meters/self.maxRange
-                if self.useAmbientLight:
+                if self.lightMode == "ambient":
                     maxValueAmbient = 1.0 / min_scaled_d
                     ambient = (1.0 / dist_to_light) / maxValueAmbient
-                    sum += ambient * brightness
-                if self.useDirectLight:
+                elif self.lightMode == "direct":
                     maxValueIntensity = 1.0 / (min_scaled_d ** 2)
                     intensity = (1.0 / (dist_to_light ** 2)) / maxValueIntensity
-                    sum += intensity * brightness
+                elif self.lightMode = "linear":
+                    intensity = dist_to_light
+                sum += intensity * brightness
                 a = -seg.angle() + PIOVER2
                 dist, hit, obj = robot.physics.castRay(robot, x, y, a, dist_to_light - .1,
                                                        ignoreRobot=self.ignore, rayType="light")
