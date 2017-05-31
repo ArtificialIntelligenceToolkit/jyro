@@ -188,21 +188,25 @@ class LightSensor(Device):
             for light in robot.physics.lights: # for each light source:
                 x, y, brightness, light_rgb = light.x, light.y, light.brightness, light.rgb
                 seg = Segment((x,y), (gx, gy))
+                seg_length = seg.length()
+                a = -seg.angle() + PIOVER2
+                dist, hit, obj = robot.physics.castRay(robot, x, y, a, seg_length - .1,
+                                                       ignoreRobot=self.ignore, rayType="light")
                 # scaled over distance, but not zero:
-                dist_to_light = min(max(seg.length(), min_dist_meters), self.maxRange) / self.maxRange
+                dist_to_light = min(max(seg_length, min_dist_meters), self.maxRange) / self.maxRange
                 min_scaled_d = min_dist_meters/self.maxRange
                 if self.lightMode == "ambient":
                     maxValueAmbient = 1.0 / min_scaled_d
                     ambient = (1.0 / dist_to_light) / maxValueAmbient
                 elif self.lightMode == "direct":
-                    maxValueIntensity = 1.0 / (min_scaled_d ** 2)
-                    intensity = (1.0 / (dist_to_light ** 2)) / maxValueIntensity
+                    if not hit:
+                        maxValueIntensity = 1.0 / (min_scaled_d ** 2)
+                        intensity = (1.0 / (dist_to_light ** 2)) / maxValueIntensity
                 elif self.lightMode == "linear":
                     intensity = 1.0 - dist_to_light
+                    if hit:
+                        intensity /= 2.0 # cut in half if in shadow
                 sum += intensity * brightness
-                a = -seg.angle() + PIOVER2
-                dist, hit, obj = robot.physics.castRay(robot, x, y, a, dist_to_light - .1,
-                                                       ignoreRobot=self.ignore, rayType="light")
                 if not hit: # no hit means it has a clear shot:
                     robot.drawRay("light", x, y, gx, gy, "orange")
                 else:
