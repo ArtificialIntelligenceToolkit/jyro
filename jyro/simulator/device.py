@@ -176,7 +176,7 @@ class LightSensor(Device):
         return d
 
     def update(self, robot):
-        min_dist_meters = 0.2
+        min_dist_meters = 0.0 if self.lightMode == "linear" else 0.2
         # for each light sensor:
         for i in range(len(self.geometry)):
             gx, gy = self.getPose(i)
@@ -198,7 +198,7 @@ class LightSensor(Device):
                     maxValueIntensity = 1.0 / (min_scaled_d ** 2)
                     intensity = (1.0 / (dist_to_light ** 2)) / maxValueIntensity
                 elif self.lightMode == "linear":
-                    intensity = self.maxRange - dist_to_light
+                    intensity = 1.0 - dist_to_light
                 sum += intensity * brightness
                 a = -seg.angle() + PIOVER2
                 dist, hit, obj = robot.physics.castRay(robot, x, y, a, dist_to_light - .1,
