@@ -198,7 +198,7 @@ class LightSensor(Device):
                     maxValueIntensity = 1.0 / (min_scaled_d ** 2)
                     intensity = (1.0 / (dist_to_light ** 2)) / maxValueIntensity
                 elif self.lightMode == "linear":
-                    intensity = dist_to_light
+                    intensity = self.maxRange - dist_to_light
                 sum += intensity * brightness
                 a = -seg.angle() + PIOVER2
                 dist, hit, obj = robot.physics.castRay(robot, x, y, a, dist_to_light - .1,
