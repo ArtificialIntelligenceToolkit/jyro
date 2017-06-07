@@ -36,6 +36,8 @@ class Robot():
                         "light": -1, "lightBlocked": 0, "trail": -1, "ir": -1, "bumper": 1,
                         "speech": 1}
         self.shapes = []
+        self.trail = []
+        self.useTrail = False
         self.addDevice(Speech())
 
     def brain(self):
@@ -50,7 +52,8 @@ class Robot():
         self.sayText = ""
         self.friction = 1.0
         self.vx, self.vy, self.va = (0.0, 0.0, 0.0) # meters / second, rads / second
-
+        self.trail = []
+        
     def _repr_svg_(self):
         from jyro.simulator import Physics
         canvas = SVGCanvas((240, 240))
@@ -118,6 +121,12 @@ class Robot():
         self._gx, self._gy = x, y
         if a is not None:
             self.setAngle(a)
+        self.updateTrail()
+
+    def updateTrail(self):
+        if self.useTrail:
+            if len(self.trail) == 0 or self.trail[-1] != (self._gx, self._gy, self._ga):
+                self.trail.append((self._gx, self._gy, self._ga))
 
     def setAngle(self, a):
         # if our angle changes, update localized position:
@@ -125,6 +134,7 @@ class Robot():
         self.a += diff
         self.a = self.a % (2 * math.pi) # keep in the positive range
         self._ga = a % (2 * math.pi) # keep in the positive range
+        self.updateTrail()
 
     def setPose(self, x, y, a=None):
         self._gx = x
@@ -132,6 +142,7 @@ class Robot():
         if a is not None:
             self._ga = a % (2 * math.pi) # keep in the positive range
         self.updateDevices()
+        self.updateTrail()
             
     def move(self, vx, va):
         self.vx = vx
@@ -342,12 +353,21 @@ class Pioneer(Robot):
         """
         Draws the body of the robot. Not very efficient.
         """
-        # Body Polygon, by x and y lists:
-        sx = [.225, .15, -.15, -.225, -.225, -.15, .15, .225]
-        sy = [.08, .175, .175, .08, -.08, -.175, -.175, -.08]
         a90 = self._ga + PIOVER2 # angle is 90 degrees off for graphics
         cos_a90 = math.cos(a90)
         sin_a90 = math.sin(a90)
+        # Draw trail:
+        if self.display["trail"] == 1:
+            cx, cy = -1, -1
+            for (x, y, a) in self.trail: # poses
+                px = canvas.pos_x(x)
+                py = canvas.pos_y(y)
+                if (cx, cy) != (-1, -1):
+                    canvas.drawLine(cx, cy, px, py, width=1, outline="purple")
+                cx, cy = px, py
+        # Body Polygon, by x and y lists:
+        sx = [.225, .15, -.15, -.225, -.225, -.15, .15, .225]
+        sy = [.08, .175, .175, .08, -.08, -.175, -.175, -.08]
         if self.display["body"] == 1:
             xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                    self._gy + x * sin_a90 + y * cos_a90),
@@ -381,6 +401,17 @@ class Pioneer(Robot):
                                     canvas.pos_x(s.end[0]),
                                     canvas.pos_y(s.end[1]),
                                     outline="purple")
+        # Draw an arrowhead at (x, y), pointing in heading direction
+        x = canvas.pos_x(self._gx)
+        y = canvas.pos_y(self._gy)
+        canvas.pushMatrix()
+        canvas.translate(x,y)
+        canvas.rotate(math.pi - self._ga)
+        size = (max(sx) - min(sx)) * canvas.scale * 0.10
+        p = [(-size, -size), (0, 0), (size, -size), (0, size)]
+        canvas.drawPolygon(p, fill="black", outline="black")
+        canvas.popMatrix()
+        
 
 class Myro(Robot):
     def __init__(self, *args, **kwargs):

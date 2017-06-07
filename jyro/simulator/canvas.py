@@ -49,3 +49,19 @@ class Canvas():
 
     def pos_y(self, y):
         return ((self.max_y - y) * self.scale)
+
+    def pushMatrix(self):
+        if self.debug:
+            print("pushMatrix")
+
+    def popMatrix(self):
+        if self.debug:
+            print("popMatrix")
+
+    def translate(self, x, y):
+        if self.debug:
+            print("translate", x, y)
+
+    def rotate(self, r):
+        if self.debug:
+            print("rotate", r)

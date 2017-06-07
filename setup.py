@@ -1,3 +1,5 @@
+import io
+
 try:
     from setuptools.core import setup
 except ImportError:
@@ -9,8 +11,14 @@ if svem_flag in sys.argv:
     # Die, setuptools, die.
     sys.argv.remove(svem_flag)
 
+with io.open('jyro/__init__.py', encoding='utf-8') as fid:
+    for line in fid:
+        if line.startswith('__version__'):
+            version = line.strip().split()[-1][1:-1]
+            break
+
 setup(name='jyro',
-      version='0.1.0',
+      version=version,
       description='Python tools for robots',
       long_description="Python and Jupyter tools for robots",
       author='Douglas Blank',

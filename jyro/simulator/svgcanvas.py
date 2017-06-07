@@ -69,3 +69,15 @@ class SVGCanvas(Canvas):
 
     def _repr_svg_(self):
         return self._canvas._repr_svg_()
+
+    def pushMatrix(self):
+        self._canvas.pushMatrix()
+
+    def popMatrix(self):
+        self._canvas.popMatrix()
+
+    def translate(self, x, y):
+        self._canvas.translate(x, y)
+
+    def rotate(self, r):
+        self._canvas.rotate(r)
