@@ -804,20 +804,32 @@ class Simulator():
     def create_widgets(self, gamepad=False):
         pass
 
+    def render(self, canvas=None):
+        if canvas is None:
+            canvas = self.canvas
+        self.physics.draw(canvas)
+        return canvas
+
+    def save(self, filename):
+        self.canvas.save(filename)
+    
     def update_gui(self, data=None, set_angle=True):
         self.physics.draw(self.canvas)
-        print("%.2f seconds" % self.physics.time)
-        for robot in self.robots:
-            print("    %s: %s" % (robot.name, robot.getPose()))
+        if data:
+            print("%.2f seconds" % self.physics.time)
+            for robot in self.robots:
+                print("    %s: %s" % (robot.name, robot.getPose()))
 
     def step(self, step_seconds=None):
         ## Update Simulator:
         if step_seconds == 0:
             self.physics.reset()
             self.physics.time = 0.0
-            return
-        for step in range(int(step_seconds/.1)):
+        elif step_seconds is None:
             self.physics.step()
+        else:
+            for step in range(int(step_seconds/.1)):
+                self.physics.step()
         self.update_gui()
 
     def get_image(self):
@@ -903,6 +915,14 @@ class VSimulator(Simulator):
         self.robot.setPose(x, y, new_a)
         self.update_gui(set_angle=False)
 
+    def render(self, canvas=None):
+        if canvas is not None:
+            self.physics.draw(canvas)
+            return canvas
+        else:
+            self.update_gui()
+            return self.canvas
+        
     def update_gui(self, data=None, set_angle=True):
         self.physics.draw(self.canvas)
         self.widgets["html_canvas"].value = self.canvas._repr_svg_()
