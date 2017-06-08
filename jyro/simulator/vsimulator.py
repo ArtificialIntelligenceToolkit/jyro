@@ -20,11 +20,10 @@ def main():
     
 if __name__ == "__main__":
     from jyro.simulator import Canvas
-    from jyro.simulator.svgcanvas import SVGCanvas
     sim = main()
     print("pose:", sim["Pioneer"].getPose())
     sim["Pioneer"].move(1, 1)
-    canvas = SVGCanvas((400, 400))
+    canvas = Canvas((400, 400))
     for i in range(1):
         sim.step()
         for r in sim.robots:

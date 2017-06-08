@@ -1,5 +1,4 @@
 from jyro.simulator.simulator import Segment, Line
-from jyro.simulator.svgcanvas import SVGCanvas
 from jyro.simulator.device import Speech
 
 import math
@@ -55,8 +54,8 @@ class Robot():
         self.trail = []
         
     def _repr_svg_(self):
-        from jyro.simulator import Physics
-        canvas = SVGCanvas((240, 240))
+        from jyro.simulator import Physics, Canvas
+        canvas = Canvas((240, 240))
         canvas.max_x = 1.0 # meters
         canvas.max_y = 1.0 # meters
         canvas.scale = min(canvas.width/canvas.max_x, canvas.height/canvas.max_y)

@@ -10,7 +10,6 @@ import random
 import sys
 
 from jyro.simulator.color import colorMap, colorCode
-from jyro.simulator.svgcanvas import SVGCanvas
 from jyro.simulator.canvas import Canvas
 
 from calysto.graphics import Color
@@ -287,7 +286,7 @@ class Physics():
         for r in self.robots:
             # if not running in a thread, call brain now:
             if run_brain:
-                r.brain()
+                r.brain(r) # brain is a function that takes self
             collision = r.step(self.timeslice)
         for r in self.robots:
             r.updateDevices()
@@ -829,9 +828,6 @@ class Simulator():
         return image._repr_png_()
 
 class VSimulator(Simulator):
-    def makeCanvas(self):
-        return SVGCanvas(self.size)
-    
     def create_widgets(self, gamepad=False):
         step = ipywidgets.Button(icon="fa-step-forward")
         clear = ipywidgets.Button(description="Clear")
@@ -954,7 +950,7 @@ if __name__ == "__main__":
     robot.addDevice(Gripper())
     robot.addDevice(PioneerFrontLightSensors())
     robot.addDevice(Camera())
-    robot.brain = lambda: robot.move(1, 1)
+    robot.brain = lambda self: self.move(1, 1)
     
     sim = Simulator(robot, worldf)
     for i in range(10):

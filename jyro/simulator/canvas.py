@@ -1,48 +1,21 @@
+from calysto.graphics import (Canvas as CalystoCanvas, Line,
+                              Circle, Polygon, Text, Ellipse, Rectangle)
+import math
+
+def distance(p1, p2):
+    """
+    Return distance between two points
+    """
+    return math.sqrt((p1[0] - p2[0]) ** 2 +
+                     (p1[1] - p2[1]) ** 2)
+
 class Canvas():
     """
-    A test Canvas class.
     """
-    def __init__(self, size, debug=False):
+    def __init__(self, size):
         self.width, self.height = size
         self.display = {"wireframe": 0}
-        self.debug = debug
-        
-    def clear(self):
-        if self.debug:
-            print("clear")
-
-    def drawLine(self, x1, y1, x2, y2, width=3, outline="black"):
-        if self.debug:
-            print("line", x1, y1, x2, y2, width, outline)
-
-    def drawOval(self, x1, y1, x2, y2, fill="", outline="black"):
-        if self.debug:
-            print("oval", x1, y1, x2, y2, fill, outline)
-
-    def drawCircle(self, x, y, radius, fill="", outline="black"):
-        if self.debug:
-            print("circle", x, y, radius, fill, outline)
-
-    def drawPolygon(self, points, fill="", outline="black"):
-        if self.debug:
-            print("polygon", points, fill, outline)
-
-    def drawText(self, x, y, text, fill="black"):
-        if self.debug:
-            print("text", x, y, text, fill)
-
-    def drawRectangle(self, x1, y1, x2, y2, fill="black",
-                      outline="black", width=3):
-        if self.debug:
-            print("rectangle", x1, y1, x2, y1, fill, outline, width)
-
-    def save(self, filename):
-        if self.debug:
-            print("save", filename)
-        
-    def renderSVG(self):
-        if self.debug:
-            print("renderSVG")
+        self._canvas = CalystoCanvas((self.width, self.height))
         
     def pos_x(self, x):
         return (x * self.scale)
@@ -50,18 +23,66 @@ class Canvas():
     def pos_y(self, y):
         return ((self.max_y - y) * self.scale)
 
+    def clear(self):
+        self._canvas.clear()
+        shape = Rectangle((0, 0), (self.width, self.height), fill="white")
+        shape.draw(self._canvas)
+
+    def drawLine(self, x1, y1, x2, y2, width=3, outline="black"):
+        shape = Line((x1, y1), (x2, y2), stroke=outline)
+        shape.draw(self._canvas)
+
+    def drawOval(self, x1, y1, x2, y2, fill="", outline="black"):
+        cx, cy = (x2 - x1)/2, (y2 - y1)/2
+        radius  = distance((cx, cy), (x2, y2))
+        shape = Ellipse((cx, cy), (radius, radius), fill=fill, stroke=outline)
+        shape.draw(self._canvas)
+
+    def drawRectangle(self, x1, y1, x2, y2, fill="", outline="black"):
+        width = x2 - x1
+        height = y2 - y1
+        shape = Rectangle((x1, y1), (width, height), stroke=outline, fill=fill)
+        shape.draw(self._canvas)
+
+    def drawCircle(self, cx, cy, radius, fill="", outline="black"):
+        shape = Circle((cx, cy), radius, fill=fill, stroke=outline)
+        shape.draw(self._canvas)
+
+    def drawPolygon(self, points, fill="", outline="black"):
+        shape = Polygon(points, stroke=outline, fill=fill)
+        shape.draw(self._canvas)
+
+    def drawText(self, x, y, text, fill="black"):
+        shape = Text(text, (x, y), stroke=fill)
+        shape.draw(self._canvas)
+
+    def save(self, filename):
+        self._canvas.save(filename)
+        
+    def render(self, format="SVG", **attribs):
+        format = format.upper()
+        if format == "SVG":
+            return self._canvas._repr_svg_(**attribs)
+        elif format == "PIL":
+            return self._canvas.toPIL(**attribs)
+        elif format == "GIF":
+            return self._canvas.toGIF(**attribs)
+        elif format == "PNG":
+            return self._canvas.convert(format="png", **attribs)
+        else: # try it:
+            return self._canvas.convert(format=format.lower(), **attribs)
+
+    def _repr_svg_(self):
+        return self._canvas._repr_svg_()
+
     def pushMatrix(self):
-        if self.debug:
-            print("pushMatrix")
+        self._canvas.pushMatrix()
 
     def popMatrix(self):
-        if self.debug:
-            print("popMatrix")
+        self._canvas.popMatrix()
 
     def translate(self, x, y):
-        if self.debug:
-            print("translate", x, y)
+        self._canvas.translate(x, y)
 
     def rotate(self, r):
-        if self.debug:
-            print("rotate", r)
+        self._canvas.rotate(r)
