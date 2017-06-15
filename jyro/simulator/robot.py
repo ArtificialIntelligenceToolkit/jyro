@@ -39,7 +39,7 @@ class Robot():
         self.useTrail = False
         self.addDevice(Speech())
 
-    def brain(self):
+    def brain(self, robot):
         pass
             
     def reset(self):
