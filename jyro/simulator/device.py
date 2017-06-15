@@ -199,13 +199,12 @@ class LightSensor(Device):
                     maxValueAmbient = 1.0 / min_scaled_d
                     intensity = (1.0 / dist_to_light) / maxValueAmbient
                 elif self.lightMode == "direct":
-                    if not hit:
-                        maxValueIntensity = 1.0 / (min_scaled_d ** 2)
-                        intensity = (1.0 / (dist_to_light ** 2)) / maxValueIntensity
+                    maxValueIntensity = 1.0 / (min_scaled_d ** 2)
+                    intensity = (1.0 / (dist_to_light ** 2)) / maxValueIntensity
                 elif self.lightMode == "linear":
                     intensity = 1.0 - dist_to_light
-                    if hit:
-                        intensity /= 2.0 # cut in half if in shadow
+                if hit:
+                    intensity /= 2.0 # cut in half if in shadow
                 sum += intensity * brightness
                 if not hit: # no hit means it has a clear shot:
                     robot.drawRay("light", x, y, gx, gy, "orange")
