@@ -197,7 +197,7 @@ class LightSensor(Device):
                 min_scaled_d = min_dist_meters/self.maxRange
                 if self.lightMode == "ambient":
                     maxValueAmbient = 1.0 / min_scaled_d
-                    ambient = (1.0 / dist_to_light) / maxValueAmbient
+                    intensity = (1.0 / dist_to_light) / maxValueAmbient
                 elif self.lightMode == "direct":
                     if not hit:
                         maxValueIntensity = 1.0 / (min_scaled_d ** 2)
