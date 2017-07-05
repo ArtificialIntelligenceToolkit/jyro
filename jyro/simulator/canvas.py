@@ -29,30 +29,48 @@ class Canvas():
         shape.draw(self._canvas)
 
     def drawLine(self, x1, y1, x2, y2, width=3, outline="black"):
+        x1 = self.pos_x(x1)
+        y1 = self.pos_y(y1)
+        x2 = self.pos_x(x2)
+        y2 = self.pos_y(y1)
         shape = Line((x1, y1), (x2, y2), stroke=outline)
         shape.draw(self._canvas)
 
     def drawOval(self, x1, y1, x2, y2, fill="", outline="black"):
+        x1 = self.pos_x(x1)
+        y1 = self.pos_y(y1)
+        x2 = self.pos_x(x2)
+        y2 = self.pos_y(y1)
         cx, cy = (x2 - x1)/2, (y2 - y1)/2
         radius  = distance((cx, cy), (x2, y2))
         shape = Ellipse((cx, cy), (radius, radius), fill=fill, stroke=outline)
         shape.draw(self._canvas)
 
     def drawRectangle(self, x1, y1, x2, y2, fill="", outline="black"):
+        x1 = self.pos_x(x1)
+        y1 = self.pos_y(y1)
+        x2 = self.pos_x(x2)
+        y2 = self.pos_y(y1)
         width = x2 - x1
         height = y2 - y1
         shape = Rectangle((x1, y1), (width, height), stroke=outline, fill=fill)
         shape.draw(self._canvas)
 
     def drawCircle(self, cx, cy, radius, fill="", outline="black"):
+        cx = self.pos_x(cx)
+        cy = self.pos_y(cy)
         shape = Circle((cx, cy), radius, fill=fill, stroke=outline)
         shape.draw(self._canvas)
 
     def drawPolygon(self, points, fill="", outline="black"):
+        points = [(self.pos_x(xy[0]), self.pos_y(xy[1])) for xy in points]
         shape = Polygon(points, stroke=outline, fill=fill)
         shape.draw(self._canvas)
 
     def drawArrow(self, cx, cy, angle, size, fill="", outline="black"):
+        cx = self.pos_x(cx)
+        cy = self.pos_y(cy)
+        size = size * self.scale
         self.pushMatrix()
         self.translate(cx, cy)
         self.rotate(math.pi - angle)
@@ -61,6 +79,8 @@ class Canvas():
         self.popMatrix()
 
     def drawText(self, x, y, text, fill="black"):
+        x = self.pos_x(x)
+        y = self.pos_y(y)
         shape = Text(text, (x, y), stroke=fill)
         shape.draw(self._canvas)
 
