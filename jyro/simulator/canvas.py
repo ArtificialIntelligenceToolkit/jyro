@@ -59,7 +59,7 @@ class Canvas():
     def drawCircle(self, cx, cy, radius, fill="", outline="black"):
         cx = self.pos_x(cx)
         cy = self.pos_y(cy)
-        shape = Circle((cx, cy), radius, fill=fill, stroke=outline)
+        shape = Circle((cx, cy), radius * self.scale, fill=fill, stroke=outline)
         shape.draw(self._canvas)
 
     def drawPolygon(self, points, fill="", outline="black"):
@@ -67,15 +67,19 @@ class Canvas():
         shape = Polygon(points, stroke=outline, fill=fill)
         shape.draw(self._canvas)
 
+    def _drawPolygon(self, points, fill="", outline="black"):
+        shape = Polygon(points, stroke=outline, fill=fill)
+        shape.draw(self._canvas)
+
     def drawArrow(self, cx, cy, angle, size, fill="", outline="black"):
         cx = self.pos_x(cx)
         cy = self.pos_y(cy)
-        size = size * self.scale
         self.pushMatrix()
         self.translate(cx, cy)
         self.rotate(math.pi - angle)
+        size = size * self.scale
         p = [(-size, -size), (0, 0), (size, -size), (0, size)]
-        self.drawPolygon(p, fill=fill, outline=outline)
+        self._drawPolygon(p, fill=fill, outline=outline)
         self.popMatrix()
 
     def drawText(self, x, y, text, fill="black"):

@@ -50,7 +50,6 @@ class Speech(Device):
     def draw(self, robot, canvas):
         if self.sayText != "":
             # center of robot:
-            x, y = canvas.pos_x(robot._gx), canvas.pos_y(robot._gy)
             canvas.drawText(x, y, self.sayText) # % self.name)
     
     def serialize(self, item='all'):
@@ -156,9 +155,9 @@ class LightSensor(Device):
         cos_a90 = math.cos(a90)
         sin_a90 = math.sin(a90)
         for (bx, by, ba) in self.geometry:
-            x = canvas.pos_x(robot._gx + bx * cos_a90 - by * sin_a90)
-            y = canvas.pos_y(robot._gy + bx * sin_a90 + by * cos_a90)
-            radius = .025 * canvas.scale
+            x = robot._gx + bx * cos_a90 - by * sin_a90
+            y = robot._gy + bx * sin_a90 + by * cos_a90
+            radius = .025
             canvas.drawCircle(x, y, radius, fill="yellow", outline="orange")
 
     def serialize(self, item='all'):
@@ -261,12 +260,12 @@ class Gripper(Device):
         a90 = robot._ga + PIOVER2 # angle is 90 degrees off for graphics
         cos_a90 = math.cos(a90)
         sin_a90 = math.sin(a90)
-        xy = [(canvas.pos_x(robot._gx + x * cos_a90 - y * sin_a90),
-               canvas.pos_y(robot._gy + x * sin_a90 + y * cos_a90)) for (x,y) in
+        xy = [((robot._gx + x * cos_a90 - y * sin_a90),
+               (robot._gy + x * sin_a90 + y * cos_a90)) for (x,y) in
               ((self.pose[0], self.openPosition),
                (self.pose[0], -self.openPosition))]
         canvas.drawLine(xy[0][0], xy[0][1], xy[1][0], xy[1][1],
-                                outline="black")
+                        outline="black")
         # left arm:
         xs = []
         ys = []
@@ -281,7 +280,7 @@ class Gripper(Device):
         xy = map(lambda x, y: (robot._gx + x * cos_a90 - y * sin_a90,
                                robot._gy + x * sin_a90 + y * cos_a90),
                  xs, ys)
-        xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
+        xy = list(xy)
         canvas.drawPolygon(xy, fill="black", outline="black")
         # right arm:
         xs = []
@@ -297,7 +296,7 @@ class Gripper(Device):
         xy = map(lambda x, y: (robot._gx + x * cos_a90 - y * sin_a90,
                                robot._gy + x * sin_a90 + y * cos_a90),
                  xs, ys)
-        xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
+        xy = list(xy)
         canvas.drawPolygon(xy, fill="black", outline="black")
 
     def serialize(self, item='all'):
@@ -424,7 +423,7 @@ class Camera(Device):
         xy = map(lambda x, y: (robot._gx + x * cos_a90 - y * sin_a90,
                                robot._gy + x * sin_a90 + y * cos_a90),
                  bx, by)
-        xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
+        xy = list(xy)
         canvas.drawPolygon(xy, fill="black")
         
     def serialize(self, item='all'):

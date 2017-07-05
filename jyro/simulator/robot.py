@@ -305,14 +305,14 @@ class Blimp(Robot):
         cos_a90 = math.cos(a90)
         sin_a90 = math.sin(a90)
         radius = self.radius
-        canvas.drawOval(canvas.pos_x(self._gx - radius),
-                        canvas.pos_y(self._gy - radius),
-                        canvas.pos_x(self._gx + radius),
-                        canvas.pos_y(self._gy + radius),
+        canvas.drawOval(self._gx - radius,
+                        self._gy - radius,
+                        self._gx + radius,
+                        self._gy + radius,
                         fill=self.color, outline="blue")
-        x = canvas.pos_x(self._gx + radius * cos_a90 - 0 * sin_a90)
-        y = canvas.pos_y(self._gy + radius * sin_a90 + 0 * cos_a90)
-        canvas.drawLine(canvas.pos_x(self._gx), canvas.pos_y(self._gy), x, y, outline="blue", width=3)
+        x = (self._gx + radius * cos_a90 - 0 * sin_a90)
+        y = (self._gy + radius * sin_a90 + 0 * cos_a90)
+        canvas.drawLine(self._gx, self._gy, x, y, outline="blue", width=3)
 
 class Puck(Robot):
     def __init__(self, *args, **kwargs):
@@ -327,10 +327,10 @@ class Puck(Robot):
         """
         if self.display["body"] == 1:
             radius = self.radius
-            x1, y1, x2, y2 = (canvas.pos_x(self._gx - radius),
-                              canvas.pos_y(self._gy - radius),
-                              canvas.pos_x(self._gx + radius),
-                              canvas.pos_y(self._gy + radius))
+            x1, y1, x2, y2 = ((self._gx - radius),
+                              (self._gy - radius),
+                              (self._gx + radius),
+                              (self._gy + radius))
             canvas.drawOval(x1, y1, x2, y2, fill=self.color, outline="black")
         if self.display["boundingBox"] == 1 and self.boundingBox != []:
             # Body Polygon, by x and y lists:
@@ -340,7 +340,7 @@ class Puck(Robot):
             xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                    self._gy + x * sin_a90 + y * cos_a90),
                      self.boundingBox[0], self.boundingBox[1])
-            xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
+            xy = list(xy)
             canvas.drawPolygon(xy, fill="", outline="purple")
 
 class Pioneer(Robot):
@@ -361,10 +361,8 @@ class Pioneer(Robot):
         if self.display["trail"] == 1:
             cx, cy = -1, -1
             for (x, y, a) in self.trail: # poses
-                px = canvas.pos_x(x)
-                py = canvas.pos_y(y)
                 if (cx, cy) != (-1, -1):
-                    canvas.drawLine(cx, cy, px, py, width=1, outline="purple")
+                    canvas.drawLine(cx, cy, x, y, width=1, outline="purple")
                 cx, cy = px, py
         # Body Polygon, by x and y lists:
         sx = [.225, .15, -.15, -.225, -.225, -.15, .15, .225]
@@ -373,7 +371,7 @@ class Pioneer(Robot):
             xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                    self._gy + x * sin_a90 + y * cos_a90),
                      sx, sy)
-            xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
+            xy = list(xy)
             if self.stall:
                 canvas.drawPolygon(xy, fill="white", outline="black")
             else:
@@ -383,13 +381,13 @@ class Pioneer(Robot):
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                        self._gy + x * sin_a90 + y * cos_a90),
                          self.boundingBox[0], self.boundingBox[1])
-                xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
+                xy = list(xy)
                 canvas.drawPolygon(xy, fill="", outline="purple")
             if self.boundingSeg != []:
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                        self._gy + x * sin_a90 + y * cos_a90),
                          self.boundingSeg[0], self.boundingSeg[1])
-                xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
+                xy = list(xy)
                 for i in range(0, len(xy), 2):
                     canvas.drawLine(xy[i][0], xy[i][1],
                                             xy[i + 1][0], xy[i + 1][1],
@@ -397,22 +395,13 @@ class Pioneer(Robot):
             additionalSegments = self.additionalSegments(False, self._gx, self._gy, cos_a90, sin_a90)
             if additionalSegments != []:
                 for s in additionalSegments:
-                    canvas.drawLine(canvas.pos_x(s.start[0]),
-                                    canvas.pos_y(s.start[1]),
-                                    canvas.pos_x(s.end[0]),
-                                    canvas.pos_y(s.end[1]),
+                    canvas.drawLine((s.start[0]),
+                                    (s.start[1]),
+                                    (s.end[0]),
+                                    (s.end[1]),
                                     outline="purple")
         # Draw an arrowhead at (x, y), pointing in heading direction
-        x = canvas.pos_x(self._gx)
-        y = canvas.pos_y(self._gy)
-        canvas.pushMatrix()
-        canvas.translate(x,y)
-        canvas.rotate(math.pi - self._ga)
-        size = (max(sx) - min(sx)) * canvas.scale * 0.10
-        p = [(-size, -size), (0, 0), (size, -size), (0, size)]
-        canvas.drawPolygon(p, fill="black", outline="black")
-        canvas.popMatrix()
-        
+        canvas.drawArrow(self._gx, self._gy, self._ga, 0.1)        
 
 class Myro(Robot):
     def __init__(self, *args, **kwargs):
@@ -433,7 +422,7 @@ class Myro(Robot):
             xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                    self._gy + x * sin_a90 + y * cos_a90),
                      sx, sy)
-            xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
+            xy = list(xy)
             canvas.drawPolygon(xy, fill=self.color, outline="black")
             # --------------------------------------------------------------------------
             # Parts: wheel, wheel, battery
@@ -452,7 +441,7 @@ class Myro(Robot):
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                        self._gy + x * sin_a90 + y * cos_a90),
                          bx[i], by[i])
-                xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
+                xy = list(xy)
                 canvas.drawPolygon(xy, fill=colors[i])
             # --------------------------------------------------------------------------
         if self.display["boundingBox"] == 1:
@@ -460,13 +449,13 @@ class Myro(Robot):
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                        self._gy + x * sin_a90 + y * cos_a90),
                          self.boundingBox[0], self.boundingBox[1])
-                xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
+                xy = list(xy)
                 canvas.drawPolygon(xy, fill="", outline="purple")
             if self.boundingSeg != []:
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                        self._gy + x * sin_a90 + y * cos_a90),
                          self.boundingSeg[0], self.boundingSeg[1])
-                xy = [(canvas.pos_x(x), canvas.pos_y(y)) for (x, y) in list(xy)]
+                xy = list(xy)
                 for i in range(0, len(xy), 2):
                     canvas.drawLine(xy[i][0], xy[i][1],
                                             xy[i + 1][0], xy[i + 1][1],
@@ -475,9 +464,9 @@ class Myro(Robot):
             if additionalSegments != []:
                 for s in additionalSegments:
                     canvas.drawLine(
-                        canvas.pos_x(s.start[0]),
-                        canvas.pos_y(s.start[1]),
-                        canvas.pos_x(s.end[0]),
-                        canvas.pos_y(s.end[1]),
+                        (s.start[0]),
+                        (s.start[1]),
+                        (s.end[0]),
+                        (s.end[1]),
                         outline="purple")
 

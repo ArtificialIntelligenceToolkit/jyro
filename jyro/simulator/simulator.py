@@ -61,9 +61,9 @@ class Light():
 
     def draw(self, canvas):
         radius = 0.25 # meters
-        x, y, brightness, color = (canvas.pos_x(self.x),
-                                   canvas.pos_y(self.y),
-                                   radius * canvas.scale,
+        x, y, brightness, color = ((self.x),
+                                   (self.y),
+                                   radius,
                                    self.color)
         canvas.drawCircle(x, y, brightness, fill=color, outline=color)
 
@@ -674,10 +674,10 @@ class Box(Shape):
                 outline = "black"
             fill = ""
         canvas.drawRectangle(
-            canvas.pos_x(self.x1),
-            canvas.pos_y(self.y1),
-            canvas.pos_x(self.x2),
-            canvas.pos_y(self.y2),
+            (self.x1),
+            (self.y1),
+            (self.x2),
+            (self.y2),
             fill=fill, outline=outline)
 
 class Polygon(Shape):
@@ -707,8 +707,7 @@ class Polygon(Shape):
             else:
                 outline = "black"
             fill = ""
-        xys = [(canvas.pos_x(x),
-                canvas.pos_y(y)) for (x, y) in self.points]
+        xys = self.points
         canvas.drawPolygon(xys, fill=fill, outline=outline)
 
 class Line(Shape):
@@ -730,10 +729,10 @@ class Line(Shape):
                 (min(self.p1[0], self.p2[0]), min(self.p1[1], self.p2[1])))
         
     def draw(self, canvas):
-        x1, y1, x2, y2 = (canvas.pos_x(self.p1[0]),
-                          canvas.pos_y(self.p1[1]),
-                          canvas.pos_x(self.p2[0]),
-                          canvas.pos_y(self.p2[1]))
+        x1, y1, x2, y2 = ((self.p1[0]),
+                          (self.p1[1]),
+                          (self.p2[0]),
+                          (self.p2[1]))
         canvas.drawLine(x1, y1, x2, y2, outline=self.outline)
 
 class Oval(Shape):
@@ -762,10 +761,10 @@ class Oval(Shape):
             else:
                 outline = "black"
             fill = ""
-        x1, y1, x2, y2 = (canvas.pos_x(self.p1[0]),
-                          canvas.pos_y(self.p1[1]),
-                          canvas.pos_x(self.p2[0]),
-                          canvas.pos_y(self.p2[1]))
+        x1, y1, x2, y2 = ((self.p1[0]),
+                          (self.p1[1]),
+                          (self.p2[0]),
+                          (self.p2[1]))
         canvas.drawOval(x1, y1, x2, y2, fill=fill, outline=outline)
 
 class Simulator():
