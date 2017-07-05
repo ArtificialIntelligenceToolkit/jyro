@@ -32,7 +32,7 @@ class Canvas():
         x1 = self.pos_x(x1)
         y1 = self.pos_y(y1)
         x2 = self.pos_x(x2)
-        y2 = self.pos_y(y1)
+        y2 = self.pos_y(y2)
         shape = Line((x1, y1), (x2, y2), stroke=outline)
         shape.draw(self._canvas)
 
@@ -40,7 +40,7 @@ class Canvas():
         x1 = self.pos_x(x1)
         y1 = self.pos_y(y1)
         x2 = self.pos_x(x2)
-        y2 = self.pos_y(y1)
+        y2 = self.pos_y(y2)
         cx, cy = (x2 - x1)/2, (y2 - y1)/2
         radius  = distance((cx, cy), (x2, y2))
         shape = Ellipse((cx, cy), (radius, radius), fill=fill, stroke=outline)
@@ -50,7 +50,7 @@ class Canvas():
         x1 = self.pos_x(x1)
         y1 = self.pos_y(y1)
         x2 = self.pos_x(x2)
-        y2 = self.pos_y(y1)
+        y2 = self.pos_y(y2)
         width = x2 - x1
         height = y2 - y1
         shape = Rectangle((x1, y1), (width, height), stroke=outline, fill=fill)
