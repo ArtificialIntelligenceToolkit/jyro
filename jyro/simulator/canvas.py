@@ -16,7 +16,7 @@ class Canvas():
         self.width, self.height = size
         self.display = {"wireframe": 0}
         self._canvas = CalystoCanvas((self.width, self.height))
-        
+
     def pos_x(self, x):
         return (x * self.scale)
 
@@ -52,13 +52,21 @@ class Canvas():
         shape = Polygon(points, stroke=outline, fill=fill)
         shape.draw(self._canvas)
 
+    def drawArrow(self, cx, cy, angle, size, fill="", outline="black"):
+        self.pushMatrix()
+        self.translate(cx, cy)
+        self.rotate(math.pi - angle)
+        p = [(-size, -size), (0, 0), (size, -size), (0, size)]
+        self.drawPolygon(p, fill=fill, outline=outline)
+        self.popMatrix()
+
     def drawText(self, x, y, text, fill="black"):
         shape = Text(text, (x, y), stroke=fill)
         shape.draw(self._canvas)
 
     def save(self, filename):
         self._canvas.save(filename)
-        
+
     def render(self, format="SVG", **attribs):
         format = format.upper()
         if format == "SVG":

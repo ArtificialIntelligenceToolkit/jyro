@@ -106,7 +106,7 @@ class RangeSensor(Device):
             if robot.physics is None:
                 self.scan[i] = 0
                 continue
-            dist, hit, obj = robot.physics.castRay(robot, gx, gy, -ga, self.maxRange)
+            dist, hit, obj = robot.physics.castRay(robot, gx, gy, -ga, self.maxRange, rayType="range")
             if hit:
                 robot.drawRay(self.type, gx, gy, hit[0], hit[1], "lightblue")
             else:

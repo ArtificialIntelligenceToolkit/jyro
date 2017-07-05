@@ -33,7 +33,7 @@ class Robot():
         # -1: don't automatically turn display on when subscribing:
         self.display = {"body": 1, "boundingBox": 0, "gripper": -1, "camera": 0, "sonar": 0,
                         "light": -1, "lightBlocked": 0, "trail": -1, "ir": -1, "bumper": 1,
-                        "speech": 1}
+                        "speech": 1, "robots": 1, "devices": 1}
         self.shapes = []
         self.trail = []
         self.useTrail = False
@@ -268,8 +268,10 @@ class Robot():
     def draw(self, canvas):
         for shape in self.shapes:
             shape.draw(canvas)
-        self.drawRobot(canvas)
-        self.drawDevices(canvas)
+        if self.display["robots"] == 1:
+            self.drawRobot(canvas)
+        if self.display["devices"] == 1:
+            self.drawDevices(canvas)
 
     def drawDevices(self, canvas):
         for device in self.devices:
