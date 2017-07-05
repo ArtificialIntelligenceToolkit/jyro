@@ -108,11 +108,13 @@ class RangeSensor(Device):
                 continue
             dist, hit, obj = robot.physics.castRay(robot, gx, gy, -ga, self.maxRange, rayType="range")
             if hit:
-                robot.drawRay(self.type, gx, gy, hit[0], hit[1], "lightblue")
+                if robot.display["devices"] == 1:
+                    robot.drawRay(self.type, gx, gy, hit[0], hit[1], "lightblue")
             else:
                 hx, hy = math.sin(-ga) * self.maxRange, math.cos(-ga) * self.maxRange
                 dist = self.maxRange
-                robot.drawRay(self.type, gx, gy, gx + hx, gy + hy, robot.colorParts[self.type])
+                if robot.display["devices"] == 1:
+                    robot.drawRay(self.type, gx, gy, gx + hx, gy + hy, robot.colorParts[self.type])
             if self.type == "bumper":
                 if dist < self.maxRange:
                     self.scan[i] = 1
@@ -207,9 +209,11 @@ class LightSensor(Device):
                     intensity /= 2.0 # cut in half if in shadow
                 sum += intensity * brightness
                 if not hit: # no hit means it has a clear shot:
-                    robot.drawRay("light", x, y, gx, gy, "orange")
+                    if robot.display["devices"] == 1:
+                        robot.drawRay("light", x, y, gx, gy, "orange")
                 else:
-                    robot.drawRay("lightBlocked", x, y, hit[0], hit[1], "purple")
+                    if robot.display["devices"] == 1:
+                        robot.drawRay("lightBlocked", x, y, hit[0], hit[1], "purple")
             self.scan[i] = sum
             for c in [0, 1, 2]:
                 self.rgb[i][c] = min(int(rgb[c]), 255)
@@ -463,7 +467,8 @@ class Camera(Device):
                                                          rayType="camera")
             if obj != None:
                 if i in [0, self.width - 1]:
-                    robot.drawRay("camera", x, y, hit[0], hit[1], "purple")
+                    if robot.display["devices"] == 1:
+                        robot.drawRay("camera", x, y, hit[0], hit[1], "purple")
                 dist = (10 - min(distance, 10))/10.0 # 10 meter range
                 if obj.type == "wall":
                     height = int(min(max((dist ** 2) * self.height/2.0, 1), self.height/2))
