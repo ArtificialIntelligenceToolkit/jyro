@@ -363,7 +363,7 @@ class Pioneer(Robot):
             for (x, y, a) in self.trail: # poses
                 if (cx, cy) != (-1, -1):
                     canvas.drawLine(cx, cy, x, y, width=1, outline="purple")
-                cx, cy = px, py
+                cx, cy = x, y
         # Body Polygon, by x and y lists:
         sx = [.225, .15, -.15, -.225, -.225, -.15, .15, .225]
         sy = [.08, .175, .175, .08, -.08, -.175, -.175, -.08]
