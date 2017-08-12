@@ -41,7 +41,7 @@ class Robot():
 
     def brain(self, robot):
         pass
-            
+
     def reset(self):
         self._gx, self._gy, self._ga = self._xya
         self.stall = 0
@@ -52,7 +52,7 @@ class Robot():
         self.friction = 1.0
         self.vx, self.vy, self.va = (0.0, 0.0, 0.0) # meters / second, rads / second
         self.trail = []
-        
+
     def _repr_svg_(self):
         from jyro.simulator import Physics, Canvas
         canvas = Canvas((240, 240))
@@ -72,10 +72,10 @@ class Robot():
         svg = canvas._repr_svg_()
         self._gx, self._gy, self._ga = xya
         return svg
-        
+
     def drawRay(self, dtype, x1, y1, x2, y2, color):
         self.shapes.append(Line((x1, y1), (x2, y2), outline=color))
-                
+
     def additionalSegments(self, propose, x, y, cos_a90, sin_a90, **dict):
         """
         propose is where it would go, if moved with device velocity, etc.
@@ -142,7 +142,7 @@ class Robot():
             self._ga = a % (2 * math.pi) # keep in the positive range
         self.updateDevices()
         self.updateTrail()
-            
+
     def move(self, vx, va):
         self.vx = vx
         self.va = va
@@ -401,7 +401,7 @@ class Pioneer(Robot):
                                     (s.end[1]),
                                     outline="purple")
         # Draw an arrowhead at (x, y), pointing in heading direction
-        canvas.drawArrow(self._gx, self._gy, self._ga, 0.1)        
+        canvas.drawArrow(self._gx, self._gy, self._ga, 0.05)
 
 class Myro(Robot):
     def __init__(self, *args, **kwargs):
@@ -469,4 +469,3 @@ class Myro(Robot):
                         (s.end[0]),
                         (s.end[1]),
                         outline="purple")
-
