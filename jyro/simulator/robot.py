@@ -39,6 +39,9 @@ class Robot():
         self.useTrail = False
         self.addDevice(Speech())
 
+    def __getitem__(self, item):
+        return self.device[item]
+
     def brain(self, robot):
         pass
 
