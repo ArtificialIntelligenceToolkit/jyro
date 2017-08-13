@@ -484,7 +484,36 @@ class Camera(Device):
                 self.scan.append((None, None, None))
             a -= stepAngle
 
+    def getData(self):
+        """
+        Return the data as a 3D matrix in (width, height, channel) order.
+        """
+        return self.loadData().transpose(1, 0, 2)
+            
     def getImage(self):
+        """
+        Return a PIL.Image from the raw data.
+        """
+        data = self.loadData()
+        img = PIL.Image.fromarray(data, mode="RGB") # saves as gif ok!
+        if self.lights:
+            draw = PIL.ImageDraw.Draw(img)
+            for light in self.lights:
+                diff, d = light # d in meters
+                distance = (10 - min(d, 10))/10.0
+                if abs(diff) < self.startAngle * 1.5: # make a little bigger to show edge of circle
+                    x = self.width/2 - diff/(self.startAngle) * self.width/2
+                    draw.ellipse((x - int(20 * distance),
+                                  20 - int(20 * distance),
+                                  x + int(20 * distance),
+                                  20 + int(20 * distance)), fill=tuple(colorMap["yellow"]))
+        return img
+        
+    def loadData(self):
+        """
+        Turns self.scan information into a vector of uint8.
+        self.data is in np.array format for easy PIL image, (height, width, channel) order.
+        """
         self.data = [128 for i in range(self.height * self.width * 3)]
         for w in range(self.width):
             (color, height, distance) = self.scan[w]
@@ -507,20 +536,9 @@ class Camera(Device):
                 # else it should be a Color
                 for d in range(self.depth):
                     self.data[(w + h * self.width) * self.depth + d] = ccode[d] * scale
-        data = np.array(self.data).reshape(self.height, self.width, self.depth).astype(np.uint8)
-        img = PIL.Image.fromarray(data, mode="RGB") # saves as gif ok!
-        if self.lights:
-            draw = PIL.ImageDraw.Draw(img)
-            for light in self.lights:
-                diff, d = light # d in meters
-                distance = (10 - min(d, 10))/10.0
-                if abs(diff) < self.startAngle * 1.5: # make a little bigger to show edge of circle
-                    x = self.width/2 - diff/(self.startAngle) * self.width/2
-                    draw.ellipse((x - int(20 * distance),
-                                  20 - int(20 * distance),
-                                  x + int(20 * distance),
-                                  20 + int(20 * distance)), fill=tuple(colorMap["yellow"]))
-        return img
+        # also return it, for external use
+        self.data = np.array(self.data, "uint8").reshape((self.height, self.width, self.depth))
+        return self.data
 
 class PioneerFrontSonars(RangeSensor):
     def __init__(self, maxRange=8.0, noise=0.0):
