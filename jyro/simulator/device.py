@@ -51,7 +51,7 @@ class Speech(Device):
         if self.sayText != "":
             # center of robot:
             canvas.drawText(x, y, self.sayText) # % self.name)
-    
+
     def serialize(self, item='all'):
         """
         item = 'all' or 'data'
@@ -155,7 +155,7 @@ class LightSensor(Device):
         gx = self.robot._gx + bx * cos_a90 - by * sin_a90
         gy = self.robot._gy + bx * sin_a90 + by * cos_a90
         return (gx, gy)
-        
+
     def draw(self, robot, canvas):
         a90 = robot._ga + PIOVER2 # angle is 90 degrees off for graphics
         cos_a90 = math.cos(a90)
@@ -431,7 +431,7 @@ class Camera(Device):
                  bx, by)
         xy = list(xy)
         canvas.drawPolygon(xy, fill="black")
-        
+
     def serialize(self, item='all'):
         """
         item = 'all' or 'data'
@@ -488,8 +488,8 @@ class Camera(Device):
         """
         Return the data as a 3D matrix in (width, height, channel) order.
         """
-        return self.loadData().transpose(1, 0, 2)
-            
+        return (self.loadData().astype("float32") / 255.0)
+
     def getImage(self):
         """
         Return a PIL.Image from the raw data.
@@ -508,7 +508,7 @@ class Camera(Device):
                                   x + int(20 * distance),
                                   20 + int(20 * distance)), fill=tuple(colorMap["yellow"]))
         return img
-        
+
     def loadData(self):
         """
         Turns self.scan information into a vector of uint8.
