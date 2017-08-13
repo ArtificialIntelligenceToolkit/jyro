@@ -784,9 +784,9 @@ class Simulator():
         self.reset()
         self.widgets = {}
         self.physics.draw(self.canvas)
-        w = self.create_widgets(gamepad)
-        if w:
-            display(w)
+        self.widget = self.create_widgets(gamepad)
+        if self.widget:
+            display(self.widget)
         self.update_gui()
 
     def makeCanvas(self):

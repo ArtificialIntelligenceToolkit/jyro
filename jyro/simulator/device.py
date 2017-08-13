@@ -484,11 +484,20 @@ class Camera(Device):
                 self.scan.append((None, None, None))
             a -= stepAngle
 
-    def getData(self):
+    def getData(self, enhanced=True):
         """
         Return the data as a 3D matrix in (width, height, channel) order.
+
+        If enhanced is True, then it will also draw all of the lights, etc.
+
+        If not enhanced, then it just converts the raw data as a vector.
         """
-        return (self.loadData().astype("float32") / 255.0)
+        # if there were no lights, etc. we could do this:
+        if not enhanced:
+            return (self.loadData().astype("float32") / 255.0)
+        else: # we have to render as image, draw on it, and then return it as vector
+            image = self.getImage()
+            return np.array(image, "float32") / 255.0
 
     def getImage(self):
         """
