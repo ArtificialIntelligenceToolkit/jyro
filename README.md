@@ -1,5 +1,19 @@
 # Jyro: Jupyter & Robots
 
+Jyro contains a simulator (jyro.simulator) and controller for real robots (jyro.myro).
+
+## Installation
+
+```
+pip3 install jyro -U
+```
+
+## Documentation
+
+See https://jyro.readthedocs.io
+
+## jyro.myro
+
 - Pictures now have OpenCV representation
 ```
   from myro import *
@@ -9,7 +23,7 @@
 ```
 - Graphics needs to be moved away from Tk
 
-## Ancestors
+## jyro.myro Ancestors
 ### pyro
 ### IPRE myro
 ### IPRE's Calico Myro
