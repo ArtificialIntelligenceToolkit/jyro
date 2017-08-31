@@ -479,75 +479,110 @@ class Camera(Device):
                     height = int(min(max((dist ** 2) * self.height/2.0, 1), self.height/2))
                 else:
                     height = int(min(max((dist ** 2) * self.height/4.0, 1), self.height/4))
-                self.scan.append((colorCode[obj.color], height, dist))
+                self.scan.append((colorCode[obj.color], height, distance, dist))
             else:
                 self.scan.append((None, None, None))
             a -= stepAngle
 
-    def getData(self, enhanced=True):
+    def getData(self):
         """
         Return the data as a 3D matrix in (width, height, channel) order.
-
-        If enhanced is True, then it will also draw all of the lights, etc.
-
-        If not enhanced, then it just converts the raw data as a vector.
         """
-        # if there were no lights, etc. we could do this:
-        if not enhanced:
-            return (self.loadData().astype("float32") / 255.0)
-        else: # we have to render as image, draw on it, and then return it as vector
-            image = self.getImage()
-            return np.array(image, "float32") / 255.0
+        image = self.getImage()
+        return np.array(image, "float32") / 255.0
 
     def getImage(self):
-        """
-        Return a PIL.Image from the raw data.
-        """
-        data = self.loadData()
-        img = PIL.Image.fromarray(data, mode="RGB") # saves as gif ok!
-        if self.lights:
-            draw = PIL.ImageDraw.Draw(img)
-            for light in self.lights:
-                diff, d = light # d in meters
-                distance = (10 - min(d, 10))/10.0
-                if abs(diff) < self.startAngle * 1.5: # make a little bigger to show edge of circle
-                    x = self.width/2 - diff/(self.startAngle) * self.width/2
-                    draw.ellipse((x - int(20 * distance),
-                                  20 - int(20 * distance),
-                                  x + int(20 * distance),
-                                  20 + int(20 * distance)), fill=tuple(colorMap["yellow"]))
-        return img
-
-    def loadData(self):
-        """
-        Turns self.scan information into a vector of uint8.
-        self.data is in np.array format for easy PIL image, (height, width, channel) order.
-        """
-        self.data = [128 for i in range(self.height * self.width * 3)]
+        ## get all shapes, rectangles, circles, etc
+        shapes = []
         for w in range(self.width):
-            (color, height, distance) = self.scan[w]
-            if color is None or height is None or distance is None:
-                continue
-            for h in range(self.height):
-                if h < (self.height - height)/2: # sky
-                    ccode = self.sky_color
-                    scale = 1.0
-                elif h > self.height - (self.height - height)/2: # ground
-                    ccode = self.ground_color
-                    scale = 1.0
-                else:
-                    ccode = color
-                    scale = distance
+            (color, height, distance, dist) = self.scan[w]
+            shapes.append(("line", distance, w, height, color, dist))
+        for light in self.lights:
+            diff, d = light # d in meters
+            x = self.width/2 - diff/(self.startAngle) * self.width/2
+            shapes.append(("light", d, diff, x))
+        img = PIL.Image.new("RGB", (60, 40), "white")
+        draw = PIL.ImageDraw.Draw(img)
+        ## draw ground and sky:
+        draw.rectangle([(0, 0), (self.width, self.height/2)], fill=tuple(self.sky_color))
+        draw.rectangle([(0, self.height/2), (self.width, self.height)], fill=tuple(self.ground_color))
+        ## sort on distance from camera
+        for shape in sorted(shapes, key=lambda tup: tup[1], reverse=True):
+            ## draw furtherest ones to closest ones
+            if shape[0] == "line":
+                stype, distance, w, height, ccode, dist = shape
+                h = (self.height - height)/2
+                y1 = h
+                y2 = self.height - h
                 if isinstance(ccode, str):
                     ccode = colorMap[ccode]
                 elif isinstance(ccode, int):
                     ccode = colorMap[colorNames[ccode]]
-                # else it should be a Color
-                for d in range(self.depth):
-                    self.data[(w + h * self.width) * self.depth + d] = ccode[d] * scale
-        # also return it, for external use
-        self.data = np.array(self.data, "uint8").reshape((self.height, self.width, self.depth))
-        return self.data
+                color = tuple([int(v * dist) for v in tuple(ccode)])
+                draw.line([(w, y1), (w, y2)], fill=color, width=1)
+            elif shape[0] == "light":
+                stype, d, diff, x = shape
+                MAXSIZE = 5
+                SIZE = 10
+                distance = (MAXSIZE - min(d, MAXSIZE))/MAXSIZE
+                x1 = x - int(SIZE * distance)
+                y1 = self.height/2 - int(SIZE * distance)
+                x2 = x + int(SIZE * distance)
+                y2 = self.height/2 + int(SIZE * distance)
+                draw.ellipse([(x1, y1), (x2, y2)], fill=tuple(colorMap["yellow"]))
+            else:
+                raise Exception("Invalid shape")
+        return img
+
+    # def getImage(self):
+    #     """
+    #     Return a PIL.Image from the raw data.
+    #     """
+    #     data = self.loadData()
+    #     img = PIL.Image.fromarray(data, mode="RGB") # saves as gif ok!
+    #     if self.lights:
+    #         draw = PIL.ImageDraw.Draw(img)
+    #         for light in self.lights:
+    #             diff, d = light # d in meters
+    #             distance = (10 - min(d, 10))/10.0
+    #             if abs(diff) < self.startAngle * 1.5: # make a little bigger to show edge of circle
+    #                 x = self.width/2 - diff/(self.startAngle) * self.width/2
+    #                 draw.ellipse((x - int(20 * distance),
+    #                               20 - int(20 * distance),
+    #                               x + int(20 * distance),
+    #                               20 + int(20 * distance)), fill=tuple(colorMap["yellow"]))
+    #     return img
+
+    # def loadData(self):
+    #     """
+    #     Turns self.scan information into a vector of uint8.
+    #     self.data is in np.array format for easy PIL image, (height, width, channel) order.
+    #     """
+    #     self.data = [128 for i in range(self.height * self.width * 3)]
+    #     for w in range(self.width):
+    #         (color, height, distance) = self.scan[w]
+    #         if color is None or height is None or distance is None:
+    #             continue
+    #         for h in range(self.height):
+    #             if h < (self.height - height)/2: # sky
+    #                 ccode = self.sky_color
+    #                 scale = 1.0
+    #             elif h > self.height - (self.height - height)/2: # ground
+    #                 ccode = self.ground_color
+    #                 scale = 1.0
+    #             else:
+    #                 ccode = color
+    #                 scale = distance
+    #             if isinstance(ccode, str):
+    #                 ccode = colorMap[ccode]
+    #             elif isinstance(ccode, int):
+    #                 ccode = colorMap[colorNames[ccode]]
+    #             # else it should be a Color
+    #             for d in range(self.depth):
+    #                 self.data[(w + h * self.width) * self.depth + d] = ccode[d] * scale
+    #     # also return it, for external use
+    #     self.data = np.array(self.data, "uint8").reshape((self.height, self.width, self.depth))
+    #     return self.data
 
 class PioneerFrontSonars(RangeSensor):
     def __init__(self, maxRange=8.0, noise=0.0):
