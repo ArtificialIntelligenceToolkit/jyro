@@ -496,7 +496,8 @@ class Camera(Device):
         shapes = []
         for w in range(self.width):
             (color, height, distance, dist) = self.scan[w]
-            shapes.append(("line", distance, w, height, color, dist))
+            if color is not None:
+                shapes.append(("line", distance, w, height, color, dist))
         for light in self.lights:
             diff, d = light # d in meters
             x = self.width/2 - diff/(self.startAngle) * self.width/2
