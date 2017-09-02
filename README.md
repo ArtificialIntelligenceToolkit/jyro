@@ -8,6 +8,12 @@ Jyro contains a simulator (jyro.simulator) and controller for real robots (jyro.
 pip3 install jyro -U
 ```
 
+On MacOS, you may also need:
+
+```bash
+brew install cairo
+```
+
 ## Documentation
 
 See https://jyro.readthedocs.io
