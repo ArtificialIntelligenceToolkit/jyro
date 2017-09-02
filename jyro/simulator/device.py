@@ -464,7 +464,7 @@ class Camera(Device):
         for i in range(self.width):
             # FIX: move camera to self.pose; currently assumes robot center
             if robot.physics is None:
-                self.scan.append((None, None, None))
+                self.scan.append((None, None, None, None))
                 continue
             ga = (robot._ga + a)
             distance, hit, obj = robot.physics.castRay(robot, x, y, -ga,
@@ -481,7 +481,7 @@ class Camera(Device):
                     height = int(min(max((dist ** 2) * self.height/4.0, 1), self.height/4))
                 self.scan.append((colorCode[obj.color], height, distance, dist))
             else:
-                self.scan.append((None, None, None))
+                self.scan.append((None, None, None, None))
             a -= stepAngle
 
     def getData(self):
