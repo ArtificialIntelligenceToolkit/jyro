@@ -74,7 +74,7 @@ class RangeSensor(Device):
         self.scan = [0] * len(geometry) # for data
 
     def getData(self):
-        return self.scan
+        return self.scan[:] # copy
 
     def serialize(self, item='all'):
         """
@@ -145,7 +145,7 @@ class LightSensor(Device):
         self.lightMode = "linear" # or "direct", "ambient"
 
     def getData(self):
-        return self.scan
+        return self.scan[:] # copy
 
     def getPose(self, index):
         a90 = self.robot._ga + PIOVER2 # angle is 90 degrees off for graphics

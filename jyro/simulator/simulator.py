@@ -819,16 +819,16 @@ class Simulator():
             for robot in self.robots:
                 print("    %s: %s" % (robot.name, robot.getPose()))
 
-    def step(self, step_seconds=None):
+    def step(self, step_seconds=None, run_brain=False):
         ## Update Simulator:
         if step_seconds == 0:
             self.physics.reset()
             self.physics.time = 0.0
         elif step_seconds is None:
-            self.physics.step()
+            self.physics.step(run_brain)
         else:
             for step in range(int(step_seconds/.1)):
-                self.physics.step()
+                self.physics.step(run_brain)
         self.update_gui()
 
     def get_image(self):
