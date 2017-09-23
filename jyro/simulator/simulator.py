@@ -235,7 +235,7 @@ class Physics():
         for l in self.lights:
             l.reset()
 
-    def draw(self, canvas, scale=None, ignore=[]):
+    def draw(self, canvas, scale=None, ignore=[], trace=False):
         """
         ignore can be a list of any of ["shapes", "robots", "lights"]
         """
@@ -263,6 +263,17 @@ class Physics():
         if "lights" not in ignore:
             for light in self.lights:
                 light.draw(canvas)
+        ## Anything in the overlay gets added here:
+        if "robots" not in ignore:
+            for robot in self.robots:
+                if trace:
+                    if (robot._px, robot._py) != (robot._gx, robot._py):
+                        canvas._overlay.scale = canvas.scale
+                        canvas._overlay.max_y = canvas.max_y
+                        canvas._overlay.drawLine(robot._px, robot._py,
+                                                 robot._gx, robot._gy,
+                                                 width=1, outline="purple")
+        canvas._canvas.shapes.extend(canvas._overlay._canvas.shapes)
         if "robots" not in ignore:
             for robot in self.robots:
                 robot.draw(canvas)
@@ -768,7 +779,8 @@ class Oval(Shape):
         canvas.drawOval(x1, y1, x2, y2, fill=fill, outline=outline)
 
 class Simulator():
-    def __init__(self, robot=None, worldf=None, size=None, gamepad=False):
+    def __init__(self, robot=None, worldf=None, size=None, gamepad=False,
+                 trace=False):
         if robot is None:
             self.robot = None
             self.robots = []
@@ -780,10 +792,11 @@ class Simulator():
             self.robots = [robot]
         self.worldf = worldf
         self.size = size if size else (240, 240)
+        self.trace = trace
         self.canvas = self.makeCanvas()
         self.reset()
         self.widgets = {}
-        self.physics.draw(self.canvas)
+        self.physics.draw(self.canvas, trace=self.trace)
         self.widget = self.create_widgets(gamepad)
         if self.widget:
             display(self.widget)
@@ -793,6 +806,7 @@ class Simulator():
         return Canvas(self.size)
     
     def reset(self):
+        self.canvas.reset()
         self.physics = Physics()
         if self.worldf is not None:
             self.worldf(self.physics)
@@ -806,14 +820,14 @@ class Simulator():
     def render(self, canvas=None):
         if canvas is None:
             canvas = self.canvas
-        self.physics.draw(canvas)
+        self.physics.draw(canvas, trace=self.trace)
         return canvas
 
     def save(self, filename):
         self.canvas.save(filename)
     
     def update_gui(self, data=None, set_angle=True):
-        self.physics.draw(self.canvas)
+        self.physics.draw(self.canvas, trace=self.trace)
         if data:
             print("%.2f seconds" % self.physics.time)
             for robot in self.robots:
@@ -822,7 +836,7 @@ class Simulator():
     def step(self, step_seconds=None, run_brain=False):
         ## Update Simulator:
         if step_seconds == 0:
-            self.physics.reset()
+            self.reset()
             self.physics.time = 0.0
         elif step_seconds is None:
             self.physics.step(run_brain)
@@ -841,13 +855,14 @@ class Simulator():
 class VSimulator(Simulator):
     def create_widgets(self, gamepad=False):
         step = ipywidgets.Button(icon="fa-step-forward")
-        clear = ipywidgets.Button(description="Clear")
+        clear = ipywidgets.Button(description="Clear Output")
         play = ipywidgets.Play(max=1000000)
         time = ipywidgets.Text(description="Time:", value="0.0 seconds")
         html_canvas = ipywidgets.HTML(value=self.canvas._repr_svg_())
         output = ipywidgets.Output()
         camera_image = ipywidgets.Image(value=self.get_image(), width=240)
         update = ipywidgets.Checkbox(description="Update GUI", value=True)
+        trace = ipywidgets.Checkbox(description="Trace Path", value=self.trace)
         y = ipywidgets.FloatSlider(readout=False, orientation="vertical")
         x = ipywidgets.FloatSlider(readout=False, orientation="horizontal")
         html_canvas_with_sliders =  ipywidgets.VBox(
@@ -868,13 +883,14 @@ class VSimulator(Simulator):
             gamepad.observe(init_gamepad)
             row1.append(gamepad)
         horz = ipywidgets.HBox(row1)
-        title = ipywidgets.VBox([ipywidgets.HBox([update, time]), horz])
+        title = ipywidgets.VBox([ipywidgets.HBox([update, trace, time]), horz])
         controls = ipywidgets.HBox([step, play, clear])
         vbox = ipywidgets.VBox([title, controls, output])
         play.observe(self.step, 'value')
         step.on_click(lambda data: self.step({"new": -1})) # signal to step once
         clear.on_click(lambda data: self.widgets["output"].clear_output())
         update.observe(self.update_gui, 'value')
+        trace.observe(self.set_trace, 'value')
         x.observe(self.set_x, 'value')
         y.observe(self.set_y, 'value')
         pan.observe(self.set_a, 'value')
@@ -902,6 +918,9 @@ class VSimulator(Simulator):
         self.robot.setPose(new_x, y, a)
         self.update_gui()
 
+    def set_trace(self, data):
+        self.trace = data["new"]
+
     def set_y(self, data):
         x, y, a = self.robot.getPose()
         new_y = data["new"]/100 * self.canvas.max_y # 0 to 100
@@ -916,14 +935,14 @@ class VSimulator(Simulator):
 
     def render(self, canvas=None):
         if canvas is not None:
-            self.physics.draw(canvas)
+            self.physics.draw(canvas, trace=self.trace)
             return canvas
         else:
             self.update_gui()
             return self.canvas
         
     def update_gui(self, data=None, set_angle=True):
-        self.physics.draw(self.canvas)
+        self.physics.draw(self.canvas, trace=self.trace)
         self.widgets["html_canvas"].value = self.canvas._repr_svg_()
         if self.robot and self.robot.device["camera"]:
             self.widgets["camera_image"].value = self.get_image()
@@ -937,7 +956,7 @@ class VSimulator(Simulator):
     def step(self, data={"new": 1}):
         ## Update Simulator:
         if data["new"] == 0:
-            self.physics.reset()
+            self.reset()
             self.physics.time = 0.0
         elif not self.widgets["update"].value:
             step_size = 50 # each is 0.1 seconds

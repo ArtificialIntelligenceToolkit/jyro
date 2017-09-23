@@ -12,10 +12,14 @@ def distance(p1, p2):
 class Canvas():
     """
     """
-    def __init__(self, size):
+    def __init__(self, size, overlay=False):
         self.width, self.height = size
         self.display = {"wireframe": 0}
         self._canvas = CalystoCanvas((self.width, self.height))
+        if not overlay:
+            self._overlay = Canvas(size, overlay=True)
+        else:
+            self._overlay = None
 
     def pos_x(self, x):
         return (x * self.scale)
@@ -23,10 +27,13 @@ class Canvas():
     def pos_y(self, y):
         return ((self.max_y - y) * self.scale)
 
+    def reset(self):
+        if self._overlay:
+            self._overlay.clear()
+        self.clear()
+
     def clear(self):
         self._canvas.clear()
-        shape = Rectangle((0, 0), (self.width, self.height), fill="white")
-        shape.draw(self._canvas)
 
     def drawLine(self, x1, y1, x2, y2, width=3, outline="black"):
         x1 = self.pos_x(x1)

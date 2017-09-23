@@ -47,6 +47,7 @@ class Robot():
 
     def reset(self):
         self._gx, self._gy, self._ga = self._xya
+        self._px, self._py, self._pa = self._xya
         self.stall = 0
         self.energy = 10000.0
         self.x, self.y, self.a = (0.0, 0.0, 0.0) # localize
@@ -120,6 +121,7 @@ class Robot():
         a90 = -self.a
         self.y += dx * cos_local90 - dy * sin_local90
         self.x += dx * sin_local90 + dy * cos_local90
+        self._px, self._py = self._gx, self._gy
         self._gx, self._gy = x, y
         if a is not None:
             self.setAngle(a)
@@ -139,6 +141,7 @@ class Robot():
         self.updateTrail()
 
     def setPose(self, x, y, a=None):
+        self._px, self._py = self._gx, self._gy
         self._gx = x
         self._gy = y
         if a is not None:
