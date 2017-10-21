@@ -7,7 +7,10 @@ A Pure Python 2D Robot Simulator
 import time
 import math
 import random
+import base64
+import html
 import sys
+import io
 
 from jyro.simulator.color import colorMap, colorCode
 from jyro.simulator.canvas import Canvas
@@ -850,7 +853,24 @@ class Simulator():
             image = self.robot.device["camera"].getImage()
         else:
             image = PIL.Image.new("RGB", (120, 60))
-        return image._repr_png_()
+        return image
+
+    def get_image_uri(self):
+        return self.image_to_uri(self.get_image())
+
+    def image_to_uri(self, img_src):
+        # Convert to binary data:
+        b = io.BytesIO()
+        try:
+            img_src.save(b, format='gif')
+        except:
+            return ""
+        data = b.getvalue()
+        data = base64.b64encode(data)
+        if not isinstance(data, str):
+            data = data.decode("latin1")
+        return "data:image/gif;base64,%s" % html.escape(data)
+
 
 class VSimulator(Simulator):
     def create_widgets(self, gamepad=False):
@@ -860,7 +880,7 @@ class VSimulator(Simulator):
         time = ipywidgets.Text(description="Time:", value="0.0 seconds")
         html_canvas = ipywidgets.HTML(value=self.canvas._repr_svg_())
         output = ipywidgets.Output()
-        camera_image = ipywidgets.Image(value=self.get_image(), width=240)
+        camera_image = ipywidgets.HTML(value="""<img style="image-rendering: pixelated;" src="%s" width="240"/>""" % self.get_image_uri())
         update = ipywidgets.Checkbox(description="Update GUI", value=True)
         trace = ipywidgets.Checkbox(description="Trace Path", value=self.trace)
         y = ipywidgets.FloatSlider(readout=False, orientation="vertical")
@@ -945,7 +965,7 @@ class VSimulator(Simulator):
         self.physics.draw(self.canvas, trace=self.trace)
         self.widgets["html_canvas"].value = self.canvas._repr_svg_()
         if self.robot and self.robot.device["camera"]:
-            self.widgets["camera_image"].value = self.get_image()
+            self.widgets["camera_image"].value = """<img style="image-rendering: pixelated;" src="%s" width="240"/>""" % self.get_image_uri()
         x, y, a = self.robot.getPose()
         self.widgets["x"].value = (x/self.canvas.max_x) * 100
         self.widgets["y"].value = (y/self.canvas.max_y) * 100
@@ -953,7 +973,7 @@ class VSimulator(Simulator):
         if set_angle:
             self.widgets["pan"].value = 100 - ((a % (math.pi * 2))/(math.pi * 2)) * 100
 
-    def step(self, data={"new": 1}):
+    def step(self, data={"new": 1}, run_brain=True):
         ## Update Simulator:
         if data["new"] == 0:
             self.reset()
