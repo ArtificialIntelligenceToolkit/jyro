@@ -419,6 +419,7 @@ class Camera(Device):
         self.startAngle = (self.field * PIOVER180)/2
         self.ground_color = colorMap["backgroundgreen"]
         self.sky_color = colorMap["lightblue"]
+        self.colors_fade_with_distance = True
 
     def draw(self, robot, canvas):
         bx = [ .14, .06, .06, .14] # front camera
@@ -519,7 +520,10 @@ class Camera(Device):
                     ccode = colorMap[ccode]
                 elif isinstance(ccode, int):
                     ccode = colorMap[colorNames[ccode]]
-                color = tuple([int(v * dist) for v in tuple(ccode)])
+                if self.colors_fade_with_distance:
+                    color = tuple([int(v * dist) for v in tuple(ccode)])
+                else:
+                    color = tuple([int(v) for v in tuple(ccode)])
                 draw.line([(w, y1), (w, y2)], fill=color, width=1)
             elif shape[0] == "light":
                 stype, d, diff, x = shape
