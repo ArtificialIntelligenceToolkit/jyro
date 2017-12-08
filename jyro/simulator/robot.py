@@ -1,5 +1,6 @@
 from jyro.simulator.simulator import Segment, Line
 from jyro.simulator.device import Speech
+from calysto.graphics import Color as GColor
 
 import math
 from collections import defaultdict
@@ -409,18 +410,22 @@ class Pioneer(Robot):
         # Draw an arrowhead at (x, y), pointing in heading direction
         canvas.drawArrow(self._gx, self._gy, self._ga, 0.05)
 
-class Myro(Robot):
-    def __init__(self, *args, **kwargs):
-        Robot.__init__(self, *args, **kwargs)
-        self.radius = 0.25
+class Scribbler(Robot):
+    def __init__(self, name, x, y, a, color="red"):
+        Robot.__init__(self, name, x, y, a,
+                       boundingBox=(( .09, .09,-.09,-.09), ## front, back
+                                    ( .08,-.08,-.08, .08)), ## sides
+                       color=color)
+        self.radius = 0.09
 
     def drawRobot(self, canvas):
-        """
-        Draws the body of the robot. Not very efficient.
-        """
-        # Body Polygon, by x and y lists:
-        sx = [ .20, .20,-.10,-.10]
-        sy = [ .15,-.15,-.15, .15]
+        sx = [0.05, 0.05, 0.07, 0.07, 0.09, 0.09, 0.07,
+              0.07, 0.05, 0.05, -0.05, -0.05, -0.07,
+              -0.08, -0.09, -0.09, -0.08, -0.07, -0.05,
+              -0.05]
+        sy = [0.06, 0.08, 0.07, 0.06, 0.06, -0.06, -0.06,
+              -0.07, -0.08, -0.06, -0.06, -0.08, -0.07,
+              -0.06, -0.05, 0.05, 0.06, 0.07, 0.08, 0.06]
         a90 = self._ga + PIOVER2 # angle is 90 degrees off for graphics
         cos_a90 = math.cos(a90)
         sin_a90 = math.sin(a90)
@@ -432,16 +437,10 @@ class Myro(Robot):
             canvas.drawPolygon(xy, fill=self.color, outline="black")
             # --------------------------------------------------------------------------
             # Parts: wheel, wheel, battery
-            bx = [[ .10, .10, -.10, -.10],
-                  [ .10, .10, -.10, -.10],
-                  [.05, .05, -.10, -.10],
-                  [.16, .17, .18, .17],
-                  [.16, .17, .18, .17]]
-            by = [[ .18, .16, .16, .18],
-                  [ -.18, -.16, -.16, -.18],
-                  [.14, -.14, -.14, .14],
-                  [.13, .135, .115, .11],
-                  [-.13, -.135, -.115, -.11]]
+            bx = [[ .04, .04, -.04, -.04],
+                  [ .04, .04, -.04, -.04]]
+            by = [[ .08, .07, .07, .08],
+                  [ -.08, -.07, -.07, -.08]]
             colors = ["black", "black", "gray", "yellow", "yellow"]
             for i in range(len(bx)):
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
@@ -449,14 +448,13 @@ class Myro(Robot):
                          bx[i], by[i])
                 xy = list(xy)
                 canvas.drawPolygon(xy, fill=colors[i])
-            # --------------------------------------------------------------------------
         if self.display["boundingBox"] == 1:
             if self.boundingBox != []:
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                        self._gy + x * sin_a90 + y * cos_a90),
                          self.boundingBox[0], self.boundingBox[1])
                 xy = list(xy)
-                canvas.drawPolygon(xy, fill="", outline="purple")
+                canvas.drawPolygon(xy, fill=GColor(0,0,0,0), outline="purple")
             if self.boundingSeg != []:
                 xy = map(lambda x, y: (self._gx + x * cos_a90 - y * sin_a90,
                                        self._gy + x * sin_a90 + y * cos_a90),
@@ -475,3 +473,5 @@ class Myro(Robot):
                         (s.end[0]),
                         (s.end[1]),
                         outline="purple")
+        # Draw an arrowhead at (x, y), pointing in heading direction
+        canvas.drawArrow(self._gx, self._gy, self._ga, 0.012)
