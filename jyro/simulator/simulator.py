@@ -47,6 +47,20 @@ def normRad(x):
     return x
 
 class Light():
+    """
+    A light source. 
+
+    Args:
+        x (float): x coordinate
+        y (float): y coordinate
+        brightness (float): illumination, typically 1.0
+        color (Color): an instance of the Color class that defines an RGB value
+
+    Example:
+        >>> lgt = Light(3, 2, 1.0, Color(100,100,100))
+        >>> lgt.reset()
+        
+    """
     def __init__(self, x, y, brightness, color):
         self._xyb = (x, y, brightness)
         self.reset()

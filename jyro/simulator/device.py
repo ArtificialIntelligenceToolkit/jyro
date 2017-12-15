@@ -194,6 +194,7 @@ class LightSensor(Device):
                 continue
             for light in robot.physics.lights: # for each light source:
                 x, y, brightness, light_rgb = light.x, light.y, light.brightness, light.rgb
+                # FIXME: never using light_rgb
                 seg = Segment((x,y), (gx, gy))
                 seg_length = seg.length()
                 a = -seg.angle() + PIOVER2
