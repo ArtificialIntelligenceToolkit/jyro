@@ -1,5 +1,5 @@
 Jyro Simulator
-================================
+==============
 
 .. toctree::
    :maxdepth: 2
@@ -10,9 +10,8 @@ Jyro Simulator
    modules
    
 
-Indices and tables
-==================
+Index and Search
+================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
