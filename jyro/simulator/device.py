@@ -540,56 +540,6 @@ class Camera(Device):
                 raise Exception("Invalid shape")
         return img
 
-    # def getImage(self):
-    #     """
-    #     Return a PIL.Image from the raw data.
-    #     """
-    #     data = self.loadData()
-    #     img = PIL.Image.fromarray(data, mode="RGB") # saves as gif ok!
-    #     if self.lights:
-    #         draw = PIL.ImageDraw.Draw(img)
-    #         for light in self.lights:
-    #             diff, d = light # d in meters
-    #             distance = (10 - min(d, 10))/10.0
-    #             if abs(diff) < self.startAngle * 1.5: # make a little bigger to show edge of circle
-    #                 x = self.width/2 - diff/(self.startAngle) * self.width/2
-    #                 draw.ellipse((x - int(20 * distance),
-    #                               20 - int(20 * distance),
-    #                               x + int(20 * distance),
-    #                               20 + int(20 * distance)), fill=tuple(colorMap["yellow"]))
-    #     return img
-
-    # def loadData(self):
-    #     """
-    #     Turns self.scan information into a vector of uint8.
-    #     self.data is in np.array format for easy PIL image, (height, width, channel) order.
-    #     """
-    #     self.data = [128 for i in range(self.height * self.width * 3)]
-    #     for w in range(self.width):
-    #         (color, height, distance) = self.scan[w]
-    #         if color is None or height is None or distance is None:
-    #             continue
-    #         for h in range(self.height):
-    #             if h < (self.height - height)/2: # sky
-    #                 ccode = self.sky_color
-    #                 scale = 1.0
-    #             elif h > self.height - (self.height - height)/2: # ground
-    #                 ccode = self.ground_color
-    #                 scale = 1.0
-    #             else:
-    #                 ccode = color
-    #                 scale = distance
-    #             if isinstance(ccode, str):
-    #                 ccode = colorMap[ccode]
-    #             elif isinstance(ccode, int):
-    #                 ccode = colorMap[colorNames[ccode]]
-    #             # else it should be a Color
-    #             for d in range(self.depth):
-    #                 self.data[(w + h * self.width) * self.depth + d] = ccode[d] * scale
-    #     # also return it, for external use
-    #     self.data = np.array(self.data, "uint8").reshape((self.height, self.width, self.depth))
-    #     return self.data
-
 class PioneerFrontSonars(RangeSensor):
     def __init__(self, maxRange=8.0, noise=0.0):
         RangeSensor.__init__(self,
@@ -820,3 +770,38 @@ class MyroLightSensors(LightSensor):
                        'back-left' : [],
                        'back' : [],
                        'back-all' : []}
+
+class DepthCamera(Camera):
+    def __init__(self, maxDist, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.maxDist = maxDist
+
+    def getImage(self):
+        ## get all shapes, rectangles, circles, etc
+        shapes = []
+        for w in range(self.width):
+            (color, height, distance, dist) = self.scan[w]
+            if color is not None:
+                color = int(255 - max(min(distance/self.maxDist, 1.0), 0.0) * 255)
+                shapes.append(("line", distance, w, height, color, dist))
+        img = PIL.Image.new("RGB", (60, 40), "white")
+        draw = PIL.ImageDraw.Draw(img)
+        ## draw ground and sky:
+        for row in range(int(self.height/2)):
+            dist = row/(self.height/2)
+            color = int(255 - max(min(dist, 1.0), 0.0) * 255)
+            draw.line([(0, row), (self.width, row)], fill=(color, color, color), width=1)
+            draw.line([(0, self.height - row), (self.width, self.height - row)], fill=(color, color, color), width=1)
+        ## sort on distance from camera
+        for shape in sorted(shapes, key=lambda tup: tup[1], reverse=True):
+            ## draw furtherest ones to closest ones
+            if shape[0] == "line":
+                stype, distance, w, height, ccode, dist = shape
+                h = (self.height - height)/2
+                y1 = h
+                y2 = self.height - h
+                color = int(255 - max(min(distance/self.maxDist, 1.0), 0.0) * 255)
+                draw.line([(w, y1), (w, y2)], fill=(color,color,color), width=1)
+            else:
+                raise Exception("Invalid shape")
+        return img
