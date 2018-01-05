@@ -1,0 +1,7 @@
+numpy
+ipywidgets>=7.0
+IPython
+Pillow
+svgwrite
+cairosvg
+calysto
