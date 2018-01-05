@@ -1,5 +1,8 @@
 # Jyro: Jupyter & Robots
 
+[![CircleCI](https://circleci.com/gh/Calysto/jyro/tree/master.svg?style=svg)](https://circleci.com/gh/Calysto/jyro/tree/master) [![codecov](https://codecov.io/gh/Calysto/jyro/branch/master/graph/badge.svg)](https://codecov.io/gh/Calysto/jyro) [![Documentation Status](https://readthedocs.org/projects/jyro/badge/?version=latest)](http://jyro.readthedocs.io/en/latest/?badge=latest) [![PyPI version](https://badge.fury.io/py/jyro.svg)](https://badge.fury.io/py/jyro)
+
+
 Jyro contains a simulator (jyro.simulator) and controller for real robots (jyro.myro).
 
 ## Installation
