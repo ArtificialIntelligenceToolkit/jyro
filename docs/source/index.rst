@@ -7,6 +7,7 @@ Jyro Simulator
 
    Jyro Simulator
    Visual Simulator
+   RobotFindLight
    modules
    
 
