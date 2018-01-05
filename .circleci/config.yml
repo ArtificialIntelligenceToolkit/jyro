@@ -46,7 +46,7 @@ jobs:
           name: run tests
           command: |
             . venv/bin/activate
-            nosetests --with-coverage --nologcapture --with-doc jyro
+            nosetests --with-coverage --nologcapture --with-doc jyro/simulator
             codecov
 
       - store_artifacts:
