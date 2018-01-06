@@ -30,6 +30,11 @@ MAXRAYLENGTH = 1000.0 # some large measurement in meters
 def sgn(v):
     """
     Return the sign of v.
+
+    >>> sgn(13)
+    1
+    >>> sgn(-2)
+    -1
     """
     if v >= 0:
         return +1
@@ -39,6 +44,11 @@ def sgn(v):
 def normRad(x):
     """
     Compute angle in range radians(-180) to radians(180)
+
+    >>> "%.2f" % normRad(90)
+    '2.04'
+    >>> "%.2f" % normRad(-90)
+    '-2.04'
     """
     while (x > math.pi):
         x -= 2 * math.pi
@@ -48,7 +58,7 @@ def normRad(x):
 
 class Light():
     """
-    A light source. 
+    A light source.
 
     Args:
         x (float): x coordinate
@@ -59,7 +69,7 @@ class Light():
     Example:
         >>> lgt = Light(3, 2, 1.0, Color(100,100,100))
         >>> lgt.reset()
-        
+
     """
     def __init__(self, x, y, brightness, color):
         self._xyb = (x, y, brightness)
@@ -87,6 +97,10 @@ class Light():
 class Segment():
     """
     Represent a line segment.
+
+    >>> segment = Segment((0,0), (0,10), 42, "wall")
+    >>> segment.length()
+    10.0
     """
     def __init__(self, start, end, id=None, type=None):
         self.start = [round(v, RESOLUTION) for v in start]
@@ -174,6 +188,10 @@ class Segment():
                 return None
 
 class Physics():
+    """
+    >>> physics = Physics()
+
+    """
     def __init__(self):
         """
         All distances in meters, angles in radians.
@@ -391,291 +409,16 @@ class Physics():
         else:
             return min(hits, key=lambda items: items[0])
 
-    def process(self, request, sockname):
-        """
-        Process does all of the work.
-        request  - a string message
-        sockname - (IPNUMBER (str), SOCKETNUM (int)) from client
-        """
-        retval = 'error'
-        if request == 'reset':
-            self.reset()
-            retval = "ok"
-        elif request.count('connectionNum'):
-            connectionNum, port = request.split(":")
-            retval = self.ports.index( int(port) )
-        elif request == 'end' or request == 'exit':
-            retval = "ok"
-            self.done = 1
-        elif request == 'quit':
-            retval = "ok"
-            self.done = 1
-        elif request == "disconnect":
-            retval = "ok"
-        elif request == 'properties':
-            retval = self.properties
-        elif request == 'builtinDevices':
-            retval = self.assoc[sockname[1]].builtinDevices
-        elif request == 'forward':
-            self.assoc[sockname[1]].move(0.3, 0.0)
-            retval = "ok"
-        elif request == 'left':
-            self.assoc[sockname[1]].move(0.0, 0.3)
-            retval = "ok"
-        elif request == 'right':
-            self.assoc[sockname[1]].move(0.0, -0.3)
-            retval = "ok"
-        elif request == 'back':
-            self.assoc[sockname[1]].move(-0.3, 0.0)
-            retval = "ok"
-        elif request == 'name':
-            retval = self.assoc[sockname[1]].name
-        elif request == 'x':
-            retval = self.assoc[sockname[1]].x
-        elif request == 'energy':
-            retval = self.assoc[sockname[1]].energy
-        elif request == 'y':
-            retval = self.assoc[sockname[1]].y
-        elif request == 'stall':
-            retval = self.assoc[sockname[1]].stall
-        elif request == 'radius':
-            retval = self.assoc[sockname[1]].radius
-        elif request == 'thr':
-            retval = self.assoc[sockname[1]].a
-        elif request == 'th':
-            retval = self.assoc[sockname[1]].a / PIOVER180
-        elif len(request) > 1 and request[0] == '!': # eval
-            try:
-                retval = str(eval(request[1:]))
-            except Exception(msg):
-                try:
-                    exec(request[1:])
-                    retval = "ok"
-                except:
-                    retval = "error: %s" % msg
-        else:
-            # assume a package
-            message = request.split("_")
-            if message[0] == "m": # "m_t_r" move:translate:rotate
-                t, r = 0, 0
-                try:
-                    t, r = float(message[1]), float(message[2])
-                except:
-                    pass
-                retval = self.assoc[sockname[1]].move(t, r)
-            elif message[0] == "l": # "l_string" say text
-                el, strng = None, None
-                try:
-                    el, strng = message
-                except:
-                    pass
-                strng = strng.replace("~-", "_")
-                self.assoc[sockname[1]].say(strng)
-                retval = "ok"
-            elif message[0] == "a": # "a_name_x_y_th" simulation placement
-                simulation, name, x, y, thr = None, None, None, None, None
-                try:
-                    simulation, name, x, y, thr = message
-                    x = float(x)
-                    y = float(y)
-                    thr = float(thr)
-                except:
-                    pass
-                if name in self.robotsByName:
-                    r = self.robotsByName[name]
-                    r.setPose(x, y, thr) # handofgod
-                    r.localize(0, 0, 0)
-                    return "ok"
-                elif name.isdigit():
-                    pos = int(name)
-                    r = self.robots[pos]
-                    r.setPose(x, y, thr) # handofgod
-                    r.localize(0, 0, 0)
-                    return "ok"
-                return "error: no such robot position '%s'" % name
-            elif message[0] == "b": # "b_x_y_th" localize
-                localization, x, y, thr = None, None, None, None
-                try:
-                    localization, x, y, thr = message
-                    x = float(x)
-                    y = float(y)
-                    thr = float(thr)
-                except:
-                    pass
-                retval = self.assoc[sockname[1]].localize(x, y, thr)
-            elif message[0] == "c": # "c_name" getpose
-                simulation, name = None, None
-                try:
-                    simulation, name = message
-                except:
-                    pass
-                if name in self.robotsByName:
-                    r = self.robotsByName[name]
-                    retval = (r._gx, r._gy, r._ga)
-                elif name.isdigit():
-                    pos = int(name)
-                    r = self.robots[pos]
-                    retval = (r._gx, r._gy, r._ga)
-            elif message[0] == "f": # "f_i_v" rgb[i][v]
-                index, pos = 0, 0
-                try:
-                    index, pos = int(message[1]), int(message[2])
-                except:
-                    pass
-                device = self.assoc[sockname[1]].getIndex("light", index)
-                if device:
-                    retval = device.rgb[pos]
-            elif message[0] == "h": # "h_v" bulb:value
-                val = None
-                try:
-                    val = float(message[1])
-                except:
-                    pass
-                self.assoc[sockname[1]].device["bulb"].brightness = val
-                retval = "ok"
-            elif message[0] == "i": # "i_name_index_property_val"
-                try:
-                    code, dtype, index, property, val = message
-                    index = int(index)
-                    device = self.assoc[sockname[1]].getIndex(dtype, index)
-                    oldval = device.__dict__[property]
-                    if type(oldval) == str:
-                        device.__dict__[property] = val
-                    elif type(oldval) == int:
-                        device.__dict__[property] = int(val)
-                    elif type(oldval) == float:
-                        device.__dict__[property] = float(val)
-                    retval = "ok"
-                except:
-                    pass
-            elif message[0] == "j": # "j_index_p_t_z" ptz[index].setPose(p, t, z)
-                code, index, p, t, z = [None] * 5
-                try:
-                    code, index, p, t, z = message
-                    index = int(index)
-                except: pass
-                device = self.assoc[sockname[1]].getIndex("ptz", index)
-                if device:
-                    if p == "None":
-                        p = None
-                    else:
-                        p = float(p)
-                    if t == "None":
-                        t = None
-                    else:
-                        t = float(t)
-                    if z == "None":
-                        z = None
-                    else:
-                        z = float(z)
-                    retval = device.setPose(p, t, z)
-            elif message[0] == "k": # "k_index" ptz[index].getPose()
-                try:
-                    code, index = message
-                    index = int(index)
-                except:
-                    pass
-                device = self.assoc[sockname[1]].getIndex("ptz", index)
-                if device:
-                    retval = device.getPose()
-            elif message[0] == "t": # "t_v" translate:value
-                val = 0
-                try:
-                    val = float(message[1])
-                except:
-                    pass
-                retval = self.assoc[sockname[1]].translate(val)
-            elif message[0] == "v": # "v_v" global step scalar:value
-                val = 0
-                try:
-                    val = float(message[1])
-                except:
-                    pass
-                self.assoc[sockname[1]].stepScalar = val
-                retval = "ok"
-            elif message[0] == "o": # "o_v" rotate:value
-                val = 0
-                try:
-                    val = float(message[1])
-                except:
-                    pass
-                retval = self.assoc[sockname[1]].rotate(val)
-            elif message[0] == "d": # "d_sonar" display:keyword
-                val = 0
-                try:
-                    val = message[1]
-                except:
-                    pass
-                retval = self.assoc[sockname[1]].display[val] = 1
-            elif message[0] == "e": # "e_amt" eat:keyword
-                val = 0
-                if message[1] == "all":
-                    val = -1.0 # code for "eat all light; returns 1.0"
-                else:
-                    try:
-                        val = float(message[1])
-                    except:
-                        pass
-                retval = self.assoc[sockname[1]].eat(val)
-            elif message[0] == "x": # "x_expression" expression
-                try:
-                    retval = eval(message[1])
-                except:
-                    pass
-            elif message[0] == "z": # "z_gripper_0_command" command
-                dtype, index, command = None, None, None
-                try:
-                    dtype = message[1]
-                    index = int(message[2])
-                    command = message[3]
-                except:
-                    pass
-                device = self.assoc[sockname[1]].getIndex(dtype, index)
-                if device:
-                    retval = device.__class__.__dict__[command](device)
-            elif message[0] == "g": # "g_sonar_0" geometry_sensor_id
-                index = 0
-                for d in self.assoc[sockname[1]].devices:
-                    if d.type == message[1]:
-                        if int(message[2]) == index:
-                            if message[1] in ["sonar", "light", "directional", "bulb", "ir", "bumper"]:
-                                retval = d.geometry, d.arc, d.maxRange
-                            elif message[1] == "camera":
-                                retval = d.width, d.height
-                        index += 1
-            elif message[0] == "r": # "r_sonar_0" groups_sensor_id
-                index = 0
-                for d in self.assoc[sockname[1]].devices:
-                    if d.type == message[1]:
-                        if int(message[2]) == index:
-                            if message[1] in ["sonar", "light", "directional", "ir", "bumper"]:
-                                retval = d.groups
-                        index += 1
-            elif message[0] == "s": # "s_sonar_0" subscribe
-                if message[1] in self.assoc[sockname[1]].display and self.assoc[sockname[1]].display[message[1]] != -1:
-                    self.assoc[sockname[1]].display[message[1]] = 1
-                self.properties.append("%s_%s" % (message[1], message[2]))
-                self.assoc[sockname[1]].subscribed = 1
-                retval = "ok"
-            elif message[0] in ["sonar", "light", "directional",
-                                "camera", "gripper", "ir", "bumper"]: # sonar_0, light_0...
-                index = 0
-                for d in self.assoc[sockname[1]].devices:
-                    if d.type == message[0]:
-                        try:
-                            i = int(message[1])
-                        except:
-                            i = -1
-                        if i == index:
-                            retval = d.scan
-                        index += 1
-        return retval
-
 class Shape():
     def __init__(self):
         pass
-    
+
 class Box(Shape):
+    """
+    >>> box = Box((0, 10), (5, 0))
+    >>> box.max_min()
+    ((5, 10), (0, 0))
+    """
     def __init__(self, ul, lr, outline="black", fill="white"):
         Shape.__init__(self)
         self.x1, self.y1 = ul
@@ -692,7 +435,7 @@ class Box(Shape):
     def max_min(self):
         return ((max(self.x1, self.x2), max(self.y1, self.y2)),
                 (min(self.x1, self.x2), min(self.y1, self.y2)))
-        
+
     def draw(self, canvas):
         outline, fill = self.outline, self.fill
         if canvas.display["wireframe"]:
@@ -726,7 +469,7 @@ class Polygon(Shape):
                  max([xy[1] for xy in self.points])),
                 (min([xy[0] for xy in self.points]),
                  min([xy[1] for xy in self.points])))
-        
+
     def draw(self, canvas):
         outline, fill = self.outline, self.fill
         if canvas.display["wireframe"]:
@@ -755,7 +498,7 @@ class Line(Shape):
     def max_min(self):
         return ((max(self.p1[0], self.p2[0]), max(self.p1[1], self.p2[1])),
                 (min(self.p1[0], self.p2[0]), min(self.p1[1], self.p2[1])))
-        
+
     def draw(self, canvas):
         x1, y1, x2, y2 = ((self.p1[0]),
                           (self.p1[1]),
@@ -780,7 +523,7 @@ class Oval(Shape):
     def max_min(self):
         return ((max(self.p1[0], self.p2[0]), max(self.p1[1], self.p2[1])),
                 (min(self.p1[0], self.p2[0]), min(self.p1[1], self.p2[1])))
-        
+
     def draw(self, canvas):
         outline, fill = self.outline, self.fill
         if canvas.display["wireframe"]:
@@ -796,6 +539,34 @@ class Oval(Shape):
         canvas.drawOval(x1, y1, x2, y2, fill=fill, outline=outline)
 
 class Simulator():
+    """
+    >>> from jyro.simulator import (Pioneer, Simulator, Camera,
+    ...                             PioneerFrontSonars, Gripper,
+    ...                             PioneerFrontLightSensors)
+    >>> def worldf(sim):
+    ...     sim.addBox(0, 0, 10, 10, fill="white", wallcolor="grey") # meters
+    ...     sim.addBox(1, 1, 2, 2, "purple")
+    ...     sim.addBox(7, 7, 8, 8, "purple")
+    ...     ## brightness of 1 is radius 1 meter
+    ...     sim.addLight(7, 7, 4.25, color=Color(255, 255, 0, 64))
+
+    >>> robot = Pioneer("Pioneer", 5.00, 5.00, math.pi / 2) # meters, radians
+    >>> robot.addDevice(PioneerFrontSonars(maxRange=4.0)) # doctest: +ELLIPSIS
+    <jyro.simulator.robot.Pioneer object at ...>
+    >>> robot.addDevice(Gripper()) # doctest: +ELLIPSIS
+    <jyro.simulator.robot.Pioneer object at ...>
+    >>> robot.addDevice(PioneerFrontLightSensors(maxRange=1.0)) # doctest: +ELLIPSIS
+    <jyro.simulator.robot.Pioneer object at ...>
+    >>> robot.addDevice(Camera()) # doctest: +ELLIPSIS
+    <jyro.simulator.robot.Pioneer object at ...>
+    >>> robot.brain = lambda self: self.move(1, 1)
+
+    >>> sim = Simulator(robot, worldf)
+    >>> for i in range(10):
+    ...     sim.step()
+    ...     sim.canvas.save("canvas%d.svg" % i)
+
+    """
     def __init__(self, robot=None, worldf=None, size=None, gamepad=False,
                  trace=False):
         if robot is None:
@@ -820,8 +591,15 @@ class Simulator():
         self.update_gui()
 
     def makeCanvas(self):
+        """
+        >>> def worldf(physics):
+        ...     physics.addBox(0, 5, 10, 0)
+        >>> sim = Simulator(worldf=worldf)
+        >>> sim.makeCanvas()                  # doctest: +ELLIPSIS
+        <jyro.simulator.canvas.Canvas object at ...>
+        """
         return Canvas(self.size)
-    
+
     def reset(self):
         self.canvas.reset()
         self.physics = Physics()
@@ -842,7 +620,7 @@ class Simulator():
 
     def save(self, filename):
         self.canvas.save(filename)
-    
+
     def update_gui(self, data=None, set_angle=True):
         self.physics.draw(self.canvas, trace=self.trace)
         if data:
@@ -887,6 +665,35 @@ class Simulator():
 
 
 class VSimulator(Simulator):
+    """
+    >>> from jyro.simulator import (Pioneer, Simulator, Camera,
+    ...                             PioneerFrontSonars, Gripper,
+    ...                             PioneerFrontLightSensors)
+    >>> def worldf(sim):
+    ...     sim.addBox(0, 0, 10, 10, fill="white", wallcolor="grey") # meters
+    ...     sim.addBox(1, 1, 2, 2, "purple")
+    ...     sim.addBox(7, 7, 8, 8, "purple")
+    ...     ## brightness of 1 is radius 1 meter
+    ...     sim.addLight(7, 7, 4.25, color=Color(255, 255, 0, 64))
+
+    >>> robot = Pioneer("Pioneer", 5.00, 5.00, math.pi / 2) # meters, radians
+    >>> robot.addDevice(PioneerFrontSonars(maxRange=4.0)) # doctest: +ELLIPSIS
+    <jyro.simulator.robot.Pioneer object at ...>
+    >>> robot.addDevice(Gripper()) # doctest: +ELLIPSIS
+    <jyro.simulator.robot.Pioneer object at ...>
+    >>> robot.addDevice(PioneerFrontLightSensors(maxRange=1.0)) # doctest: +ELLIPSIS
+    <jyro.simulator.robot.Pioneer object at ...>
+    >>> robot.addDevice(Camera()) # doctest: +ELLIPSIS
+    <jyro.simulator.robot.Pioneer object at ...>
+    >>> robot.brain = lambda self: self.move(1, 1)
+
+    >>> sim = VSimulator(robot, worldf)   # doctest: +ELLIPSIS
+    VBox(...)
+    >>> for i in range(10):
+    ...     sim.step()
+    ...     sim.canvas.save("canvas%d.svg" % i)
+
+    """
     def create_widgets(self, gamepad=False):
         step = ipywidgets.Button(icon="fa-step-forward")
         clear = ipywidgets.Button(description="Clear Output")
@@ -974,7 +781,7 @@ class VSimulator(Simulator):
         else:
             self.update_gui()
             return self.canvas
-        
+
     def update_gui(self, data=None, set_angle=True):
         self.physics.draw(self.canvas, trace=self.trace)
         self.widgets["html_canvas"].value = self.canvas._repr_svg_()
@@ -1004,32 +811,3 @@ class VSimulator(Simulator):
             self.update_gui()
         else:
             self.widgets["time"].value = "%.2f seconds" % self.physics.time
-
-if __name__ == "__main__":
-    from jyro.simulator import (Pioneer, Simulator, Camera,
-                                PioneerFrontSonars, Gripper,
-                                PioneerFrontLightSensors)
-    def worldf(sim):
-        # (443,466), (22,420), 40.357554)
-        sim.addBox(0, 0, 10, 10, fill="white", wallcolor="grey") # meters
-        sim.addBox(1, 1, 2, 2, "purple")
-        sim.addBox(7, 7, 8, 8, "purple")
-        ## brightness of 1 is radius 1 meter
-        sim.addLight(7, 7, 4.25, color=Color(255, 255, 0, 64))
-
-    robot = Pioneer("Pioneer", 5.00, 5.00, math.pi / 2) # meters, radians
-    robot.addDevice(PioneerFrontSonars(maxRange=4.0))
-    robot.addDevice(Gripper())
-    robot.addDevice(PioneerFrontLightSensors())
-    robot.addDevice(Camera())
-    robot.brain = lambda self: self.move(1, 1)
-    
-    sim = Simulator(robot, worldf)
-    for i in range(10):
-        sim.step(0.1)
-        sim.canvas.save("canvas%d.svg" % i)
-
-    sim = VSimulator(robot, worldf)
-    for i in range(10):
-        sim.step()
-        sim.canvas.save("canvas%d.svg" % i)
