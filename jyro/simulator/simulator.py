@@ -720,7 +720,7 @@ class Simulator():
             self.update_gui()
             frames.append(function(self, stop - 1))
         if movie_name is None:
-            movie_name = "%s-movie.gif" % self.name.replace(" ", "_")
+            movie_name = "movie.gif"
         if frames:
             frames[0].save(movie_name, save_all=True, append_images=frames[1:],
                            optimize=optimize, loop=loop, duration=duration)
@@ -762,7 +762,7 @@ class Simulator():
         >>> from IPython.display import SVG
         >>> def function(simulator, index):
         ...     cam_image = simulator.get_image()
-        ...     return (simulator.canvas.render("png"),
+        ...     return (simulator.canvas.render("pil"),
         ...             cam_image.resize((cam_image.size[0] * 4,
         ...                               cam_image.size[1] * 4)))
         >>> sv = sim.playback([(0,0,0), (0,1,0)], function)
