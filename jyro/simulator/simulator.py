@@ -669,6 +669,112 @@ class Simulator():
             data = data.decode("latin1")
         return "data:image/gif;base64,%s" % html.escape(data)
 
+    def movie(self, poses, function, movie_name=None, start=0, stop=None, step=1,
+              loop=0, optimize=True, duration=100, return_it=True):
+        """
+        Make a movie from a list of poses and a function.
+
+        function(simulator, index) and returns a displayable.
+
+        >>> from jyro.simulator import (Pioneer, Simulator, Camera,
+        ...                             PioneerFrontSonars, Gripper,
+        ...                             PioneerFrontLightSensors)
+        >>> def worldf(sim):
+        ...     sim.addBox(0, 0, 10, 10, fill="white", wallcolor="grey") # meters
+        ...     sim.addBox(1, 1, 2, 2, "purple")
+        ...     sim.addBox(7, 7, 8, 8, "purple")
+        ...     ## brightness of 1 is radius 1 meter
+        ...     sim.addLight(7, 7, 4.25, color=Color(255, 255, 0, 64))
+
+        >>> robot = Pioneer("Pioneer", 5.00, 5.00, math.pi / 2) # meters, radians
+        >>> robot.addDevice(PioneerFrontSonars(maxRange=4.0)) # doctest: +ELLIPSIS
+        <jyro.simulator.robot.Pioneer object at ...>
+        >>> robot.addDevice(Gripper()) # doctest: +ELLIPSIS
+        <jyro.simulator.robot.Pioneer object at ...>
+        >>> robot.addDevice(PioneerFrontLightSensors(maxRange=1.0)) # doctest: +ELLIPSIS
+        <jyro.simulator.robot.Pioneer object at ...>
+        >>> robot.addDevice(Camera()) # doctest: +ELLIPSIS
+        <jyro.simulator.robot.Pioneer object at ...>
+        >>> robot.brain = lambda self: self.move(1, 1)
+        >>> sim = Simulator(robot, worldf)
+
+        >>> from IPython.display import SVG
+        >>> def function(simulator, index):
+        ...     cam_image = simulator.get_image()
+        ...     return simulator.canvas.render("pil")
+        >>> sim.movie([(0,0,0), (0,1,0)], function, movie_name="/tmp/movie.gif")
+        <IPython.core.display.HTML object>
+        """
+        from IPython.display import HTML
+        if stop is None:
+            stop = len(poses)
+        frames = []
+        indices = []
+        for index in range(start, stop, step):
+            self.robots[0].setPose(*poses[index])
+            self.update_gui()
+            frames.append(function(self, index))
+            indices.append(index)
+        if stop - 1 not in indices:
+            self.robots[0].setPose(*poses[index])
+            self.update_gui()
+            frames.append(function(self, stop - 1))
+        if movie_name is None:
+            movie_name = "%s-movie.gif" % self.name.replace(" ", "_")
+        if frames:
+            frames[0].save(movie_name, save_all=True, append_images=frames[1:],
+                           optimize=optimize, loop=loop, duration=duration)
+            if return_it:
+                data = open(movie_name, "rb").read()
+                data = base64.b64encode(data)
+                if not isinstance(data, str):
+                    data = data.decode("latin1")
+                return HTML("""<img src="data:image/gif;base64,{0}" alt="{1}">""".format(html.escape(data), movie_name))
+
+    def playback(self, poses, function, play_rate=0.0):
+        """
+        Playback a list of poses.
+
+        function(simulator) and returns displayable(s).
+
+        >>> from jyro.simulator import (Pioneer, Simulator, Camera,
+        ...                             PioneerFrontSonars, Gripper,
+        ...                             PioneerFrontLightSensors)
+        >>> def worldf(sim):
+        ...     sim.addBox(0, 0, 10, 10, fill="white", wallcolor="grey") # meters
+        ...     sim.addBox(1, 1, 2, 2, "purple")
+        ...     sim.addBox(7, 7, 8, 8, "purple")
+        ...     ## brightness of 1 is radius 1 meter
+        ...     sim.addLight(7, 7, 4.25, color=Color(255, 255, 0, 64))
+
+        >>> robot = Pioneer("Pioneer", 5.00, 5.00, math.pi / 2) # meters, radians
+        >>> robot.addDevice(PioneerFrontSonars(maxRange=4.0)) # doctest: +ELLIPSIS
+        <jyro.simulator.robot.Pioneer object at ...>
+        >>> robot.addDevice(Gripper()) # doctest: +ELLIPSIS
+        <jyro.simulator.robot.Pioneer object at ...>
+        >>> robot.addDevice(PioneerFrontLightSensors(maxRange=1.0)) # doctest: +ELLIPSIS
+        <jyro.simulator.robot.Pioneer object at ...>
+        >>> robot.addDevice(Camera()) # doctest: +ELLIPSIS
+        <jyro.simulator.robot.Pioneer object at ...>
+        >>> robot.brain = lambda self: self.move(1, 1)
+        >>> sim = Simulator(robot, worldf)
+
+        >>> from IPython.display import SVG
+        >>> def function(simulator, index):
+        ...     cam_image = simulator.get_image()
+        ...     return (simulator.canvas.render("png"),
+        ...             cam_image.resize((cam_image.size[0] * 4,
+        ...                               cam_image.size[1] * 4)))
+        >>> sv = sim.playback([(0,0,0), (0,1,0)], function)
+        """
+        def position_robot_at(index):
+            self.robots[0].setPose(*poses[index])
+            self.update_gui()
+            return function(self, index)
+
+        sv = SequenceViewer("Jyro Playback", position_robot_at, len(poses),
+                            play_rate=play_rate)
+        return sv
 
 class VSimulator(Simulator):
     """
@@ -818,23 +924,6 @@ class VSimulator(Simulator):
         else:
             self.widgets["time"].value = "%.2f seconds" % self.physics.time
 
-    def playback(self, poses, play_rate=0.0):
-        """
-        Playback a list of poses.
-
-        """
-        from IPython.display import SVG
-        def position_robot_at(index):
-            self.robots[0].setPose(*poses[index])
-            self.widgets["time"].value = str(index)
-            self.update_gui()
-            cam_image = self.get_image()
-            return (SVG(self.canvas.render()),
-                    cam_image.resize((cam_image.size[0] * 4,
-                                      cam_image.size[1] * 4)))
-        sv = SequenceViewer("Jyro Playback", position_robot_at, len(poses),
-                            play_rate=play_rate)
-        return sv
 
 class _Player(threading.Thread):
     """
