@@ -672,7 +672,7 @@ class Simulator():
         return "data:image/gif;base64,%s" % html.escape(data)
 
     def movie(self, poses, function, movie_name=None, start=0, stop=None, step=1,
-              loop=0, optimize=True, duration=100, return_it=True):
+              loop=0, optimize=True, duration=100, embed=False):
         """
         Make a movie from a list of poses and a function.
 
@@ -707,7 +707,7 @@ class Simulator():
         >>> sim.movie([(0,0,0), (0,1,0)], function, movie_name="/tmp/movie.gif")
         <IPython.core.display.HTML object>
         """
-        from IPython.display import HTML
+        from IPython.display import Image
         if stop is None:
             stop = len(poses)
         frames = []
@@ -726,12 +726,7 @@ class Simulator():
         if frames:
             frames[0].save(movie_name, save_all=True, append_images=frames[1:],
                            optimize=optimize, loop=loop, duration=duration)
-            if return_it:
-                data = open(movie_name, "rb").read()
-                data = base64.b64encode(data)
-                if not isinstance(data, str):
-                    data = data.decode("latin1")
-                return HTML("""<img src="data:image/gif;base64,{0}" alt="{1}">""".format(html.escape(data), movie_name))
+            return Image(url=movie_name, embed=embed)
 
     def playback(self, poses, function, play_rate=0.0):
         """
