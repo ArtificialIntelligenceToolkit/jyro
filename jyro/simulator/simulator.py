@@ -585,7 +585,7 @@ class Simulator():
             self.robot = robot
             self.robots = [robot]
         self.worldf = worldf
-        self.size = size if size else (240, 240)
+        self.size = size if size else (400, 400)
         self.trace = trace
         self.canvas = self.makeCanvas()
         self.reset()
@@ -809,7 +809,7 @@ class VSimulator(Simulator):
     def create_widgets(self, gamepad=False):
         step = ipywidgets.Button(icon="fa-step-forward")
         clear = ipywidgets.Button(description="Clear Output")
-        play = ipywidgets.Play(max=1000000)
+        play = ipywidgets.Play(max=1000000, show_repeat=False, layout={"width": "100%"})
         time = ipywidgets.Text(description="Time:", value="0.0 seconds")
         html_canvas = ipywidgets.HTML(value=self.canvas._repr_svg_())
         output = ipywidgets.Output()
@@ -820,7 +820,7 @@ class VSimulator(Simulator):
         x = ipywidgets.FloatSlider(readout=False, orientation="horizontal")
         html_canvas_with_sliders =  ipywidgets.VBox(
             [ipywidgets.HBox([y, html_canvas]),
-             x])
+             x], layout={"height": "%spx" % (self.size[1] + 60)})
         pan = ipywidgets.FloatSlider(readout=False, orientation="horizontal")
         camera_image_with_sliders = ipywidgets.VBox([camera_image, pan])
         row1 = [html_canvas_with_sliders, camera_image_with_sliders]
@@ -847,9 +847,10 @@ class VSimulator(Simulator):
         x.observe(self.set_x, 'value')
         y.observe(self.set_y, 'value')
         pan.observe(self.set_a, 'value')
-        y.layout = ipywidgets.Layout(height="248px", padding="0px 0px 0px 0px", width="10px")
-        pan.layout = ipywidgets.Layout(height="20px", padding="0px 0px 0px 0px", width="248px")
-        x.layout = ipywidgets.Layout(height="30px", padding="0px 0px 0px 10px", width="260px")
+        y.layout = ipywidgets.Layout(height="%spx" % (self.size[1]), padding="0px 0px 0px 0px", width="15px")
+        x.layout = ipywidgets.Layout(height="15px", padding="0px 0px 0px 10px", width="%spx" % (self.size[0] + 20))
+        # Camera pan scroll:
+        pan.layout = ipywidgets.Layout(height="15px", padding="0px 0px 0px 0px", width="248px")
         self.widgets.update({
             "step": step,
             "play": play,
