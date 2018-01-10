@@ -588,8 +588,8 @@ class Simulator():
         self.size = size if size else (400, 400)
         self.trace = trace
         self.canvas = self.makeCanvas()
-        self.reset()
         self.widgets = {}
+        self.reset()
         self.physics.draw(self.canvas, trace=self.trace)
         self.widget = self.create_widgets(gamepad)
         if self.widget:
@@ -614,6 +614,8 @@ class Simulator():
         for robot in self.robots:
             robot.reset()
             self.physics.addRobot(robot)
+        if self.widgets:
+            self.update_gui()
 
     def create_widgets(self, gamepad=False):
         pass
@@ -810,6 +812,7 @@ class VSimulator(Simulator):
         step = ipywidgets.Button(icon="fa-step-forward")
         clear = ipywidgets.Button(description="Clear Output")
         play = ipywidgets.Play(max=1000000, show_repeat=False, layout={"width": "100%"})
+        refresh_button = Button(icon="refresh", layout=Layout(width="25%"))
         time = ipywidgets.Text(description="Time:", value="0.0 seconds")
         html_canvas = ipywidgets.HTML(value=self.canvas._repr_svg_())
         output = ipywidgets.Output()
@@ -837,9 +840,10 @@ class VSimulator(Simulator):
             row1.append(gamepad)
         horz = ipywidgets.HBox(row1)
         title = ipywidgets.VBox([ipywidgets.HBox([update, trace, time]), horz])
-        controls = ipywidgets.HBox([step, play, clear])
+        controls = ipywidgets.HBox([step, play, clear, refresh_button])
         vbox = ipywidgets.VBox([title, controls, output])
         play.observe(self.step, 'value')
+        refresh_button.on_click(lambda widget: self.reset())
         step.on_click(lambda data: self.step({"new": -1})) # signal to step once
         clear.on_click(lambda data: self.widgets["output"].clear_output())
         update.observe(self.update_gui, 'value')
@@ -854,6 +858,7 @@ class VSimulator(Simulator):
         self.widgets.update({
             "step": step,
             "play": play,
+            "refresh": refresh_button,
             "time": time,
             "html_canvas": html_canvas,
             "output": output,
@@ -908,7 +913,6 @@ class VSimulator(Simulator):
             self.widgets["pan"].value = 100 - ((a % (math.pi * 2))/(math.pi * 2)) * 100
 
     def step(self, data={"new": 1}, run_brain=True):
-        ## Update Simulator:
         if data["new"] == 0:
             self.reset()
             self.physics.time = 0.0
