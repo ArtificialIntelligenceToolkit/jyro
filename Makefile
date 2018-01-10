@@ -2,6 +2,7 @@ export NAME=`python3 setup.py --name 2>/dev/null`
 export VERSION=`python3 setup.py --version 2>/dev/null`
 
 all:
+	rm -rf dist
 	pip install wheel -U
 	python setup.py register
 	python setup.py bdist_wheel

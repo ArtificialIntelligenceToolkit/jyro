@@ -705,7 +705,7 @@ class Simulator():
         ...     cam_image = simulator.get_image()
         ...     return simulator.canvas.render("pil")
         >>> sim.movie([(0,0,0), (0,1,0)], function, movie_name="/tmp/movie.gif")
-        <IPython.core.display.HTML object>
+        <IPython.core.display.Image object>
         """
         from IPython.display import Image
         if stop is None:
