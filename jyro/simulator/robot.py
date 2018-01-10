@@ -64,8 +64,8 @@ class Robot():
         canvas.max_x = 1.0 # meters
         canvas.max_y = 1.0 # meters
         canvas.scale = min(canvas.width/canvas.max_x, canvas.height/canvas.max_y)
-        xya = self._gx, self._gy, self._ga
-        self._gx, self._gy, self._ga = (0.5, 0.5, 0)
+        xy = self._gx, self._gy
+        self._gx, self._gy = (0.5, 0.5)
         remove_sim = False
         if self.physics is None:
             self.physics = Physics() # for drawings
@@ -75,7 +75,7 @@ class Robot():
         if remove_sim:
             self.physics = None
         svg = canvas._repr_svg_()
-        self._gx, self._gy, self._ga = xya
+        self._gx, self._gy = xy
         return svg
 
     def drawRay(self, dtype, x1, y1, x2, y2, color):
