@@ -568,6 +568,13 @@ class PioneerFrontSonars(RangeSensor):
                        'back' : [],
                        'back-all' : []}
 
+class PioneerFrontSonar(RangeSensor):
+    def __init__(self, maxRange=8.0, noise=0.0):
+        RangeSensor.__init__(self,
+                             "sonar", geometry = (( 0.0, 0.0, 0),),
+                             arc = 5 * PIOVER180, maxRange=maxRange, noise=noise)
+        self.groups = {'all': [0]}
+
 class PioneerBackSonars(RangeSensor):
     def __init__(self, maxRange=8.0, noise=0.0):
         RangeSensor.__init__(self,
