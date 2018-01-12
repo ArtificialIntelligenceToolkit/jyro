@@ -4,9 +4,9 @@ export VERSION=`python3 setup.py --version 2>/dev/null`
 all:
 	rm -rf dist
 	pip install wheel -U
-	python setup.py register
-	python setup.py bdist_wheel
-	python setup.py sdist --formats=zip
+	python3 setup.py register
+	python3 setup.py bdist_wheel
+	python3 setup.py sdist --formats=zip
 	twine upload dist/*
 
 tag:
