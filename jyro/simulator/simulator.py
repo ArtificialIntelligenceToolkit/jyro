@@ -238,9 +238,6 @@ class Physics():
         else:
             return None
 
-    def update(self):
-        pass
-
     def addBox(self, ulx, uly, lrx, lry, fill="purple", wallcolor=None):
         if wallcolor is None:
             wallcolor = fill
@@ -629,6 +626,9 @@ class Simulator():
 
     def save(self, filename):
         self.canvas.save(filename)
+
+    def update(self):
+        self.physics.draw(self.canvas, trace=self.trace)
 
     def update_gui(self, data=None, set_angle=True):
         self.physics.draw(self.canvas, trace=self.trace)
