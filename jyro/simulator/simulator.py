@@ -777,6 +777,12 @@ class Simulator():
                             play_rate=play_rate)
         return sv
 
+    def display(self):
+        """
+        Provide a representation of the simulation.
+        """
+        return self
+
 class VSimulator(Simulator):
     """
     >>> from jyro.simulator import (Pioneer, Simulator, Camera,
@@ -928,6 +934,11 @@ class VSimulator(Simulator):
         else:
             self.widgets["time"].value = "%.2f seconds" % self.physics.time
 
+    def display(self):
+        """
+        Provide a representation of the simulation.
+        """
+        return self.widget
 
 class _Player(threading.Thread):
     """
