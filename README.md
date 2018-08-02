@@ -21,16 +21,24 @@ brew install cairo
 
 See https://jyro.readthedocs.io
 
-## jyro.myro
+## jyro.robot
+
+Notes:
+
+* remove modemmanager
+* connect to fluke in settings
+* find MAC address (in settings window, or `hcitool scan`)
+* start connection:
+  * `sudo rfcomm connect /dev/rfcomm0 B4:D8:A9:00:03:C0 1`
 
 - Pictures now have OpenCV representation
 ```
-  from myro import *
-  init('/dev/tty.Fluke2-1234-Fluke2')
-  p = takePicture()
+  from jyro.robot import Scribbler
+  robot = Scribbler('/dev/tty.Fluke2-1234-Fluke2')
+  p = robot.takePicture()
   cv2.imshow('image', p.pixels)
 ```
-- Graphics needs to be moved away from Tk
+- Graphics needs to be moved away from Tkinit
 
 ## jyro.myro Ancestors
 ### pyro
