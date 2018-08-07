@@ -24,7 +24,10 @@ setup(name='jyro',
       author='Douglas Blank',
       author_email='doug.blank@gmail.com',
       url="https://github.com/Calysto/jyro",
-      install_requires=['calysto'],
+      install_requires=[
+          'calysto', 'pyserial', 'numpy',
+          'ipywidgets>=7.0', 'IPython', 'Pillow',
+      ],
       packages=[
           'jyro',
           'jyro.simulator',

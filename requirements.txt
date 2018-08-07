@@ -1,3 +1,4 @@
+pyserial
 numpy
 ipywidgets>=7.0
 IPython
